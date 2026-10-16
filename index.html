@@ -39,8 +39,7 @@ h1{font-family:var(--f-display);font-weight:700;font-size:clamp(26px,4vw,32px);l
 @media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
 .col{display:flex;flex-direction:column;gap:14px;min-width:0}
 section.card{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:16px;min-width:0}
-#inputs>section:nth-child(1){background:var(--t1)} #inputs>section:nth-child(2){background:var(--t2)} #inputs>section:nth-child(3){background:var(--t3)} #inputs>section:nth-child(4){background:var(--t4)}
-#inputs>section:nth-child(5){background:var(--t5)} #inputs>section:nth-child(6){background:var(--t6)} #inputs>section:nth-child(7){background:var(--t7)} #inputs>section:nth-child(8){background:var(--t8)}
+#inputs>section:nth-child(odd){background:var(--t5)} #inputs>section:nth-child(even){background:var(--t4)}
 .card h2{font-weight:700;font-size:18px;margin:0 0 4px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
 .card h2 .ref{font-size:13px;font-weight:400;color:var(--muted)}
 .hint{color:var(--muted);font-size:14px;margin:0 0 12px;max-width:70ch}
