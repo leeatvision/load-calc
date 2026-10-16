@@ -86,7 +86,8 @@ details.job[open] summary{margin-bottom:10px}
 .warnbox p{margin:0} .warnbox p+p{margin-top:6px}
 .compare{margin:12px 18px;display:flex;justify-content:space-between;gap:10px;align-items:center;font-size:13px;color:var(--muted);flex-wrap:wrap}
 .compare button{appearance:none;border:1px solid var(--line);background:var(--sunk);color:var(--ink);border-radius:4px;padding:6px 10px;font:inherit;font-size:13px;cursor:pointer}
-.actions{display:flex;flex-wrap:wrap;gap:8px;padding:14px 18px;border-top:1px solid var(--line)}
+.actions{display:flex;flex-wrap:wrap;gap:8px;padding:14px 18px 10px}
+.status:empty{display:none}
 .btn{appearance:none;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);border-radius:4px;padding:9px 14px;font:inherit;font-weight:600;cursor:pointer;transition:background-color 150ms cubic-bezier(0.4,0,0.2,1)}
 .btn:not(.ghost):not(:disabled):hover{background:var(--accent-hover);border-color:var(--accent-hover)}
 .btn.ghost:hover{border-color:var(--muted)}
@@ -442,6 +443,12 @@ function renderResult(){
   let rows=r.lines.map(l=>`<tr class="${l.sub?'sub':''}"><td><span class="rf">${esc(l.ref)}</span>${esc(l.label)}<span class="dt">${esc(l.detail)}</span></td><td class="va">${fmt(l.va)}</td></tr>`).join('');
   rows+=`<tr class="tot"><td style="padding-left:18px">Calculated load</td><td class="va">${fmt(r.total)} VA</td></tr>`;
   $('result').innerHTML=`
+    <div class="actions">
+      <button class="btn" type="button" id="pdfBtn">Download PDF</button>
+      <button class="btn ghost" type="button" id="exBtn">Load NEC example</button>
+      <button class="btn ghost" type="button" id="clrBtn">Clear all</button>
+    </div>
+    <div class="status" id="status">${isExample?'Example house shown. Clear all to start a new job.':''}</div>
     <div class="plate">
       <div><div class="lbl">${m==='optional'?'Optional method · 120.82':'Standard method · Part III'}${isExample?' · example':''}</div><div class="svc">${r.service||'—'}<span>A</span></div><div class="lbl">Minimum service</div></div>
       <div class="calc">${fmt(r.total)} VA<br>÷ 240 V<br><b>${r.amps} A</b></div>
@@ -452,13 +459,7 @@ function renderResult(){
     </dl>
     ${r.warn.length?`<div class="warnbox" style="margin-top:12px">${r.warn.map(w=>`<p>${esc(w)}</p>`).join('')}</div>`:''}
     <div style="overflow-x:auto"><table class="ws"><tbody>${rows}</tbody></table></div>
-    <div class="compare"><span>${m==='optional'?'Standard':'Optional'} method: <b style="color:var(--ink)">${other.amps} A → ${other.service||'—'} A</b></span><button type="button" data-switch="${m==='optional'?'standard':'optional'}">View ${m==='optional'?'standard':'optional'}</button></div>
-    <div class="actions">
-      <button class="btn" type="button" id="pdfBtn">Download PDF</button>
-      <button class="btn ghost" type="button" id="exBtn">Load NEC example</button>
-      <button class="btn ghost" type="button" id="clrBtn">Clear all</button>
-    </div>
-    <div class="status" id="status">${isExample?'Example house shown. Clear all to start a new job.':''}</div>`;
+    <div class="compare"><span>${m==='optional'?'Standard':'Optional'} method: <b style="color:var(--ink)">${other.amps} A → ${other.service||'—'} A</b></span><button type="button" data-switch="${m==='optional'?'standard':'optional'}">View ${m==='optional'?'standard':'optional'}</button></div>`;
   $('mbar').innerHTML=`<span>${m==='optional'?'Optional':'Standard'}: ${r.amps} A → ${r.service||'—'} A service</span><a href="#result">Worksheet</a>`;
 }
 function touched(){ if(isExample){isExample=false;} save(); }
