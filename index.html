@@ -76,8 +76,7 @@ input[type=checkbox]{width:22px;height:22px;flex:none;accent-color:var(--accent)
 .add:hover{border-color:var(--accent)}
 @media (max-width:520px){.wrap{padding-block:12px 96px}h1{font-size:24px}.code{font-size:12px}section.card{padding:14px 12px}.tab{flex:1 1 0;padding:10px 6px 8px;font-size:15px}.tab small{display:block;margin:2px 0 0}.btn{min-height:44px}.plate{padding:14px}.plate .svc{font-size:46px}.ws td:first-child{padding-left:12px}.ws td{padding-right:12px}.actions,.compare,.meta{padding-left:12px;padding-right:12px}.compare{margin-left:0;margin-right:0}.status{padding-left:12px;padding-right:12px}
 .fields{grid-template-columns:minmax(0,1fr)}label.f{justify-content:flex-start}
-.row{grid-template-columns:minmax(0,1fr) 84px 44px 44px}.row.nomotor{grid-template-columns:minmax(0,1fr) 96px 44px}.row.ev{grid-template-columns:minmax(0,1fr) 84px 84px 44px}.row input{padding-left:10px;padding-right:8px}
-.actions .btn{flex:1 1 0;min-width:0;padding:8px 4px;font-size:14px;line-height:1.2;white-space:normal}}
+.row{grid-template-columns:minmax(0,1fr) 84px 44px 44px}.row.nomotor{grid-template-columns:minmax(0,1fr) 96px 44px}.row.ev{grid-template-columns:minmax(0,1fr) 84px 84px 44px}.row input{padding-left:10px;padding-right:8px}}
 details.job summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
 details.job summary::-webkit-details-marker{display:none}
 details.job summary .tog{font-size:13px;color:var(--accent-text);font-weight:600}
@@ -116,6 +115,7 @@ details.job[open] summary{margin-bottom:10px}
 .btn.ghost{background:none;color:var(--ink);border-color:var(--line)}
 .btn:disabled{opacity:.5;cursor:default}
 .status{margin:-8px 0 14px;font-size:14px;color:var(--muted)}
+@media (max-width:520px){.actions .btn{flex:1 1 0;min-width:0;padding:8px 4px;font-size:14px;line-height:1.2;white-space:normal}}
 .foot{margin-top:22px;color:var(--muted);font-size:12.5px;max-width:75ch}
 .mbar{display:none}
 @media (max-width:900px){.mbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:5;justify-content:space-between;align-items:center;gap:12px;background:var(--accent);color:var(--accent-ink);padding:10px max(16px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));font-weight:600;font-size:15px}
