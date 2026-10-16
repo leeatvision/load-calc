@@ -1,0 +1,554 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Dwelling Load Calc</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
+</head><body>
+<style>
+/* Layout: panel-schedule worksheet — inputs left, live result card pinned right; stacks on phones. Palette and type from the Vision Electrical Integration design system */
+:root{
+  --bg:#FAFAFA; --surface:#FFFFFF; --sunk:#F4F4F4; --ink:#1E1E1E; --muted:#606060; --line:#E0E0E0;
+  --accent:#78B83F; --accent-hover:#5E9430; --accent-ink:#1E1E1E; --accent-text:#47721F; --accent-soft:#EDF5E1;
+  --warn:#8A5A00; --warn-soft:#FDF3E0;
+  --f-display:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-body:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#1A1A1A; --surface:#232323; --sunk:#1E1E1E; --ink:#F4F4F4; --muted:#A0A0A0; --line:#3D3D3D;
+  --accent:#8DC44D; --accent-hover:#A0D166; --accent-ink:#111111; --accent-text:#A0D166; --accent-soft:#22301A;
+  --warn:#E8A020; --warn-soft:#2E2410; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#1A1A1A; --surface:#232323; --sunk:#1E1E1E; --ink:#F4F4F4; --muted:#A0A0A0; --line:#3D3D3D;
+  --accent:#8DC44D; --accent-hover:#A0D166; --accent-ink:#111111; --accent-text:#A0D166; --accent-soft:#22301A;
+  --warn:#E8A020; --warn-soft:#2E2410; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 96px}
+header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px;margin-bottom:16px}
+.eyebrow{font-weight:600;letter-spacing:.1em;text-transform:uppercase;font-size:12px;color:var(--accent-text)}
+h1{font-family:var(--f-display);font-weight:700;font-size:clamp(28px,4.5vw,38px);line-height:1.15;letter-spacing:-.015em;margin:4px 0 0;text-wrap:balance}
+.code{font-family:var(--f-mono);font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:4px 8px;background:var(--surface)}
+.tabs{display:flex;gap:4px;border-bottom:2px solid var(--line);margin-bottom:18px;overflow-x:auto}
+.tab{appearance:none;border:0;background:none;color:var(--muted);font-family:var(--f-display);font-weight:600;font-size:16px;padding:10px 16px 8px;border-bottom:3px solid transparent;margin-bottom:-2px;cursor:pointer;white-space:nowrap}
+.tab small{font-family:var(--f-mono);font-size:11px;font-weight:400;margin-left:6px;letter-spacing:0}
+.tab[aria-selected="true"]{color:var(--accent-text);border-bottom-color:var(--accent)}
+.tab:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,440px);gap:20px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+.col{display:flex;flex-direction:column;gap:14px;min-width:0}
+section.card{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:16px;min-width:0}
+.card h2{font-family:var(--f-display);font-weight:600;font-size:17px;margin:0 0 4px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.card h2 .ref{font-family:var(--f-mono);font-size:11px;font-weight:400;letter-spacing:0;text-transform:none;color:var(--muted)}
+.hint{color:var(--muted);font-size:13px;margin:0 0 12px}
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px 12px}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.02em;min-width:0}
+input,select{font:inherit;font-size:15px;color:var(--ink);background:var(--sunk);border:1px solid var(--line);border-radius:4px;padding:8px 10px;width:100%;min-width:0}
+input[type=number]{font-family:var(--f-mono);font-size:14px}
+input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent)}
+.rows{display:flex;flex-direction:column;gap:8px}
+.row{display:grid;grid-template-columns:minmax(0,1fr) 120px auto auto;gap:8px;align-items:center}
+.row.nomotor{grid-template-columns:minmax(0,1fr) 120px auto}
+.row.ev{grid-template-columns:minmax(0,1fr) 110px 110px auto}
+.rowhead{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.chk{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);white-space:nowrap}
+.x{appearance:none;border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:4px;width:34px;height:36px;cursor:pointer;font-size:18px;line-height:1}
+.x:hover{color:var(--ink);border-color:var(--muted)}
+.add{appearance:none;align-self:flex-start;border:1px dashed var(--line);background:none;color:var(--accent-text);border-radius:4px;padding:7px 12px;font:inherit;font-weight:600;font-size:13px;cursor:pointer}
+.add:hover{border-color:var(--accent)}
+@media (max-width:520px){.row,.row.nomotor,.row.ev{grid-template-columns:minmax(0,1fr) 96px auto}.row .chk{grid-column:1/-1;order:5}.row.ev .sp{grid-column:1/2}}
+details.job summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+details.job summary::-webkit-details-marker{display:none}
+details.job summary .tog{font-size:13px;color:var(--accent-text);font-weight:600}
+details.job[open] summary{margin-bottom:10px}
+.inline{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-top:10px}
+/* result card */
+.result{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px);background:var(--surface);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+@media (max-width:900px){.result{position:static}}
+.plate{background:var(--accent);color:var(--accent-ink);padding:16px 18px;display:grid;grid-template-columns:1fr auto;gap:4px 16px;align-items:end}
+.plate .lbl{font-weight:600;letter-spacing:.1em;text-transform:uppercase;font-size:11.5px;opacity:.85}
+.plate .svc{font-family:var(--f-display);font-weight:800;font-size:60px;line-height:1;letter-spacing:-.025em}
+.plate .svc span{font-size:28px;margin-left:4px;letter-spacing:0}
+.plate .calc{font-family:var(--f-mono);font-size:13px;text-align:right;line-height:1.6}
+.plate .calc b{font-size:20px;font-weight:600}
+.meta{padding:12px 18px;border-bottom:1px solid var(--line);display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:13px}
+.meta dt{color:var(--muted)} .meta dd{margin:0;font-family:var(--f-mono);font-size:12.5px}
+.ws{width:100%;border-collapse:collapse;font-size:13px}
+.ws td{padding:8px 18px 8px 0;vertical-align:top;border-bottom:1px solid var(--line)}
+.ws td:first-child{padding-left:18px}
+.ws .va{font-family:var(--f-mono);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.ws .rf{font-family:var(--f-mono);font-size:11px;color:var(--muted);display:block}
+.ws .dt{color:var(--muted);font-size:12px;display:block;margin-top:2px}
+.ws tr.sub td{color:var(--muted);background:var(--sunk);font-size:12px;padding-top:5px;padding-bottom:5px}
+.ws tr.sub td:first-child{padding-left:30px}
+.ws tr.tot td{font-weight:600;border-bottom:0;font-size:14px}
+.warnbox{margin:0 18px 12px;background:var(--warn-soft);color:var(--warn);border-radius:4px;padding:10px 12px;font-size:13px}
+.warnbox p{margin:0} .warnbox p+p{margin-top:6px}
+.compare{margin:12px 18px;display:flex;justify-content:space-between;gap:10px;align-items:center;font-size:13px;color:var(--muted);flex-wrap:wrap}
+.compare button{appearance:none;border:1px solid var(--line);background:var(--sunk);color:var(--ink);border-radius:4px;padding:6px 10px;font:inherit;font-size:13px;cursor:pointer}
+.actions{display:flex;flex-wrap:wrap;gap:8px;padding:14px 18px;border-top:1px solid var(--line)}
+.btn{appearance:none;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);border-radius:4px;padding:9px 14px;font:inherit;font-weight:600;cursor:pointer;transition:background-color 150ms cubic-bezier(0.4,0,0.2,1)}
+.btn:not(.ghost):not(:disabled):hover{background:var(--accent-hover);border-color:var(--accent-hover)}
+.btn.ghost:hover{border-color:var(--muted)}
+.btn.ghost{background:none;color:var(--ink);border-color:var(--line)}
+.btn:disabled{opacity:.5;cursor:default}
+.status{padding:0 18px 12px;font-size:13px;color:var(--muted);min-height:1em}
+.foot{margin-top:22px;color:var(--muted);font-size:12.5px;max-width:75ch}
+.mbar{display:none}
+@media (max-width:900px){.mbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:5;justify-content:space-between;align-items:center;gap:12px;background:var(--accent);color:var(--accent-ink);padding:10px max(16px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));font-weight:600;font-size:15px}
+.mbar a{color:inherit;font-size:14px;font-family:var(--f-body)}}
+@media (prefers-reduced-motion:no-preference){.plate .svc{transition:opacity .15s}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="eyebrow">Vision Electrical · Residential service sizing</div>
+      <h1>Dwelling Load Calc</h1>
+    </div>
+    <div class="code">NEC 2026 · Art. 120 · 120/240 V, 1Φ, 3-wire</div>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Calculation method">
+    <button class="tab" role="tab" id="tab-optional" aria-selected="true" data-m="optional">Optional method<small>120.82</small></button>
+    <button class="tab" role="tab" id="tab-standard" aria-selected="false" data-m="standard">Standard method<small>Part III</small></button>
+  </nav>
+
+  <div class="grid">
+    <div class="col" id="inputs">
+      <section class="card">
+        <details class="job" id="jobbox">
+          <summary><h2>Job information <span class="ref">optional</span></h2><span class="tog">Show</span></summary>
+          <p class="hint">Anything filled in here prints at the top of the PDF. Blank fields are left off.</p>
+          <div class="fields" id="jobfields"></div>
+        </details>
+      </section>
+
+      <section class="card">
+        <h2>Dwelling <span class="ref">120.41 · 120.52</span></h2>
+        <p class="hint">Floor area from outside dimensions. Leave out open porches, garages, and unfinished space not adaptable for future use.</p>
+        <div class="fields">
+          <label class="f">Living area (ft²)<input type="number" id="sqft" min="0" step="1" inputmode="numeric"></label>
+          <label class="f">Small-appliance circuits (min 2)<input type="number" id="sa" min="2" step="1" inputmode="numeric"></label>
+          <label class="f">Laundry circuits<input type="number" id="laundry" min="0" step="1" inputmode="numeric"></label>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Cooking <span class="ref">Table 120.55 · 120.82(B)(3)</span></h2>
+        <p class="hint">Ranges, cooktops, and wall ovens. Enter nameplate kW.</p>
+        <div class="rows" id="list-cooking"></div>
+        <label class="chk" id="combineWrap" style="margin-top:10px"><input type="checkbox" id="cookCombine"> Treat cooktop + ovens in the same room as one range (Note 4)</label>
+      </section>
+
+      <section class="card">
+        <h2>Clothes dryer <span class="ref">120.54</span></h2>
+        <p class="hint" id="dryerHint"></p>
+        <div class="rows" id="list-dryers"></div>
+      </section>
+
+      <section class="card">
+        <h2>Fastened-in-place appliances <span class="ref">120.53 · 120.82(B)(3)</span></h2>
+        <p class="hint" id="appHint"></p>
+        <div class="rows" id="list-appliances"></div>
+      </section>
+
+      <section class="card">
+        <h2>Heating &amp; cooling <span class="ref" id="hvacRef"></span></h2>
+        <p class="hint" id="hvacHint"></p>
+        <div class="fields" id="hvacfields"></div>
+      </section>
+
+      <section class="card">
+        <h2>EV chargers <span class="ref">120.57 · 120.82(D)</span></h2>
+        <p class="hint">Nameplate VA (48 A × 240 V = 11,520 VA). Counted at the larger of nameplate or 7,200 VA, at 100%. Fill in the setpoint only when a listed load-management system limits the charger (120.7).</p>
+        <div class="rows" id="list-evse"></div>
+      </section>
+
+      <section class="card">
+        <h2>Other loads <span class="ref" id="otherRef"></span></h2>
+        <p class="hint" id="otherHint"></p>
+        <div class="rows" id="list-other"></div>
+      </section>
+    </div>
+
+    <aside class="result" id="result" aria-live="polite"></aside>
+  </div>
+
+  <p class="foot">Built to the 2026 NEC, Article 120, which the Colorado State Electrical Board made effective August 1, 2026. Section numbers and factors should be confirmed against the adopted code book and any local amendments before a calculation is submitted. Conductor sizes shown are typical copper/aluminum for a whole-dwelling service at 83% of rating (310.12) with 75 °C terminations; check terminations, conditions of use, and the utility's requirements. A licensed electrician reviews and signs every calculation.</p>
+</div>
+<div class="mbar" id="mbar"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script>
+// ---- Load calculation engine: NEC 2026 Article 120, one-family dwelling, 120/240 V single-phase ----
+const LC = (() => {
+  const V = 240;
+  const STD_SIZES = [100, 110, 125, 150, 175, 200, 225, 250, 300, 350, 400, 450, 500, 600];
+  const CONDUCTORS = { // typical dwelling service conductors at 83% of rating (310.12), 75 °C terminations
+    100: ['4 AWG', '2 AWG'], 110: ['3 AWG', '1 AWG'], 125: ['2 AWG', '1/0 AWG'], 150: ['1 AWG', '2/0 AWG'],
+    175: ['1/0 AWG', '3/0 AWG'], 200: ['2/0 AWG', '4/0 AWG'], 225: ['3/0 AWG', '250 kcmil'],
+    250: ['4/0 AWG', '300 kcmil'], 300: ['250 kcmil', '350 kcmil'], 350: ['350 kcmil', '500 kcmil'],
+    400: ['400 kcmil', '600 kcmil']
+  };
+  const COL_A = [80, 75, 70, 66, 62, 59, 56, 53, 51, 49, 47, 45];
+  const COL_B = [80, 65, 55, 50, 45, 43, 40, 36, 35, 34, 32, 32];
+  const COL_C = [8, 11, 14, 17, 20, 21, 22, 23, 24, 25, 26, 27];
+
+  const num = v => { const n = parseFloat(v); return isFinite(n) && n > 0 ? n : 0; };
+  const r0 = v => Math.round(v);
+  const fmt = v => r0(v).toLocaleString('en-US');
+
+  // 120.5: fraction of an ampere 0.5 or more rounds up, less than 0.5 dropped
+  const amps = va => { const a = va / V; return Math.floor(a) + ((a - Math.floor(a)) >= 0.5 ? 1 : 0); };
+  const serviceFor = a => STD_SIZES.find(s => s >= Math.max(a, 100)) || null;
+
+  // Table 120.55 for a set of cooking appliances (kW). Returns {va, notes[]}
+  function cooking(list, combine) {
+    const kws = list.map(c => num(c.kw)).filter(k => k > 0);
+    if (!kws.length) return { va: 0, notes: ['No electric cooking'] };
+    if (combine) {
+      const total = kws.reduce((a, b) => a + b, 0);
+      const r = cooking([{ kw: total }], false);
+      r.notes.unshift(`Note 4: ${kws.length} unit(s) treated as one ${total.toFixed(2)} kW range`);
+      return r;
+    }
+    const small = kws.filter(k => k <= 1.75), a = kws.filter(k => k > 1.75 && k < 3.5),
+      b = kws.filter(k => k >= 3.5 && k <= 8.75), c = kws.filter(k => k > 8.75);
+    let kw = 0; const notes = [];
+    if (small.length) { const s = small.reduce((x, y) => x + y, 0); kw += s; notes.push(`${small.length} unit(s) ≤1¾ kW at nameplate: ${s.toFixed(2)} kW`); }
+    if (a.length) { const s = a.reduce((x, y) => x + y, 0), f = COL_A[Math.min(a.length, 12) - 1]; kw += s * f / 100; notes.push(`Col A, ${a.length} unit(s): ${s.toFixed(2)} kW × ${f}%`); }
+    if (b.length) { const s = b.reduce((x, y) => x + y, 0), f = COL_B[Math.min(b.length, 12) - 1]; kw += s * f / 100; notes.push(`Col B, ${b.length} unit(s): ${s.toFixed(2)} kW × ${f}%`); }
+    if (c.length) {
+      const base = COL_C[Math.min(c.length, 12) - 1];
+      const avg = c.map(k => Math.max(k, 12)).reduce((x, y) => x + y, 0) / c.length;
+      const over = avg - 12, steps = over > 0 ? Math.floor(over) + ((over - Math.floor(over)) >= 0.5 ? 1 : 0) : 0;
+      const val = base * (1 + 0.05 * steps);
+      kw += val;
+      notes.push(steps ? `Col C, ${c.length} unit(s): ${base} kW + ${steps * 5}% (Note ${c.length > 1 && new Set(c).size > 1 ? '2' : '1'}, ${avg.toFixed(2)} kW rating) = ${val.toFixed(2)} kW`
+        : `Col C, ${c.length} unit(s): ${base} kW`);
+      if (c.some(k => k > 27)) notes.push('Unit over 27 kW: Table 120.55 does not cover it; calculate separately');
+    }
+    return { va: kw * 1000, notes };
+  }
+
+  function evseVA(e) {
+    const sp = num(e.setpoint);
+    if (sp) return { va: sp, how: `Load-managed setpoint (120.7)` };
+    const np = num(e.va);
+    return np >= 7200 ? { va: np, how: 'Nameplate' } : { va: 7200, how: `7,200 VA minimum (nameplate ${fmt(np)} VA)` };
+  }
+
+  // Heating side details shared by both methods
+  function hvacParts(h) {
+    const blower = num(h.blower), cool = num(h.cool);
+    return { blower, cool, type: h.heatType, heat: num(h.heat), comp: num(h.hpComp), supp: num(h.hpSupp),
+      interlock: !!h.interlock, units: Math.max(1, parseInt(h.units) || 1) };
+  }
+
+  function standard(s) {
+    const lines = [], warn = [];
+    const sqft = num(s.sqft), sa = Math.max(2, parseInt(s.sa) || 0), ld = Math.max(0, parseInt(s.laundry) || 0);
+    // 1. General lighting group
+    const gl = sqft * 2, sav = sa * 1500, lav = ld * 1500, grp = gl + sav + lav;
+    const glDem = Math.min(grp, 3000) + Math.max(0, Math.min(grp, 120000) - 3000) * 0.35 + Math.max(0, grp - 120000) * 0.25;
+    lines.push({ ref: '120.41', label: 'General lighting & receptacles', detail: `${fmt(sqft)} ft² × 2 VA`, va: gl, sub: true });
+    lines.push({ ref: '120.52(A)', label: 'Small-appliance circuits', detail: `${sa} × 1,500 VA`, va: sav, sub: true });
+    lines.push({ ref: '120.52(B)', label: 'Laundry circuit', detail: `${ld} × 1,500 VA`, va: lav, sub: true });
+    lines.push({ ref: 'Table 120.42', label: 'General lighting demand', detail: `${fmt(grp)} VA: first 3,000 at 100%, next at 35%`, va: glDem });
+    // 2. Fastened-in-place appliances
+    const apps = (s.appliances || []).filter(x => num(x.va));
+    const appSum = apps.reduce((t, x) => t + num(x.va), 0);
+    const appDem = apps.length >= 4 ? appSum * 0.75 : appSum;
+    if (apps.length) lines.push({ ref: '120.53', label: 'Fastened-in-place appliances', detail: `${apps.length} appliance(s), ${fmt(appSum)} VA${apps.length >= 4 ? ' × 75%' : ' at 100% (fewer than 4)'}`, va: appDem });
+    // 3. Dryers
+    const dr = (s.dryers || []).filter(x => num(x.va));
+    if (dr.length) {
+      const dv = dr.reduce((t, x) => t + Math.max(5000, num(x.va)), 0);
+      lines.push({ ref: '120.54', label: 'Clothes dryer' + (dr.length > 1 ? 's' : ''), detail: dr.map(x => num(x.va) < 5000 ? `${fmt(num(x.va))} → 5,000 VA min` : `${fmt(num(x.va))} VA`).join(', '), va: dv });
+      if (dr.length > 2) warn.push('More than two dryers: Table 120.54 demand factors may reduce this. Counted at 100% here.');
+    }
+    // 4. Cooking
+    const ck = cooking(s.cooking || [], s.cookCombine);
+    if (ck.va) lines.push({ ref: 'Table 120.55', label: 'Cooking equipment', detail: ck.notes.join('; '), va: ck.va });
+    ck.notes.filter(n => n.includes('27 kW')).forEach(n => warn.push(n));
+    // 5. Heating vs cooling (120.60)
+    const h = hvacParts(s.hvac || {});
+    let heatVA = 0, heatDesc = 'No electric heat', heatMotor = 0;
+    if (h.type === 'furnace') { heatVA = h.heat; heatDesc = `Electric furnace / strip heat ${fmt(h.heat)} VA`; }
+    else if (h.type === 'heatpump') {
+      if (h.interlock && h.supp) { heatVA = Math.max(h.comp, h.supp); heatDesc = `Heat pump, interlocked: larger of compressor ${fmt(h.comp)} or supplemental ${fmt(h.supp)} VA`; heatMotor = h.comp >= h.supp ? h.comp : 0; }
+      else { heatVA = h.comp + h.supp; heatDesc = `Heat pump compressor ${fmt(h.comp)} + supplemental ${fmt(h.supp)} VA`; heatMotor = h.comp; }
+    } else if (h.type === 'space') { heatVA = h.heat; heatDesc = `${h.units} space heater(s), ${fmt(h.heat)} VA total`; }
+    else if (h.type === 'storage') { heatVA = h.heat; heatDesc = `Thermal storage ${fmt(h.heat)} VA`; }
+    const heatTot = heatVA ? heatVA + h.blower : 0, coolTot = h.cool ? h.cool + h.blower : 0;
+    const useHeat = heatTot >= coolTot;
+    const hv = Math.max(heatTot, coolTot);
+    if (hv) lines.push({ ref: '120.51 / 120.60', label: useHeat ? 'Heating (governs over cooling)' : 'Cooling (governs over heating)',
+      detail: (useHeat ? heatDesc : `A/C or heat pump cooling ${fmt(h.cool)} VA`) + (h.blower ? ` + blower ${fmt(h.blower)} VA` : '') + ` (other side: ${fmt(useHeat ? coolTot : heatTot)} VA, omitted)`, va: hv });
+    // 6. Largest motor 25%
+    const motors = [];
+    apps.filter(x => x.motor).forEach(x => motors.push({ n: x.name || 'Appliance motor', va: num(x.va) }));
+    if (hv) {
+      if (h.blower) motors.push({ n: 'Air handler blower', va: h.blower });
+      if (!useHeat && h.cool) motors.push({ n: 'A/C compressor', va: h.cool });
+      if (useHeat && heatMotor) motors.push({ n: 'Heat pump compressor', va: heatMotor });
+    }
+    motors.sort((a, b) => b.va - a.va);
+    if (motors.length) lines.push({ ref: '120.50', label: '25% of largest motor', detail: `${motors[0].n}: ${fmt(motors[0].va)} VA × 25%`, va: motors[0].va * 0.25 });
+    // 7. EVSE
+    (s.evse || []).filter(e => num(e.va) || num(e.setpoint)).forEach(e => { const r = evseVA(e); lines.push({ ref: '120.57', label: e.name || 'EV charger', detail: r.how + ' at 100%', va: r.va }); });
+    // 8. Other loads at 100%
+    (s.other || []).filter(x => num(x.va)).forEach(x => lines.push({ ref: '—', label: x.name || 'Other load', detail: 'At 100%', va: num(x.va) }));
+    const total = lines.filter(l => !l.sub).reduce((t, l) => t + l.va, 0);
+    return finish(lines, total, warn);
+  }
+
+  function optional(s) {
+    const lines = [], warn = [];
+    const sqft = num(s.sqft), sa = Math.max(2, parseInt(s.sa) || 0), ld = Math.max(0, parseInt(s.laundry) || 0);
+    const gl = sqft * 2, sav = (sa + ld) * 1500;
+    lines.push({ ref: '120.82(B)(1)', label: 'General lighting & receptacles', detail: `${fmt(sqft)} ft² × 2 VA`, va: gl, sub: true });
+    lines.push({ ref: '120.82(B)(2)', label: 'Small-appliance & laundry circuits', detail: `${sa + ld} × 1,500 VA`, va: sav, sub: true });
+    const ckSum = (s.cooking || []).reduce((t, c) => t + num(c.kw) * 1000, 0);
+    if (ckSum) lines.push({ ref: '120.82(B)(3)', label: 'Cooking equipment (nameplate)', detail: (s.cooking || []).filter(c => num(c.kw)).map(c => `${c.name || 'Cooking'} ${num(c.kw)} kW`).join(', '), va: ckSum, sub: true });
+    const drSum = (s.dryers || []).reduce((t, d) => t + num(d.va), 0);
+    if (drSum) lines.push({ ref: '120.82(B)(3)', label: 'Clothes dryer (nameplate)', detail: (s.dryers || []).filter(d => num(d.va)).map(d => `${fmt(num(d.va))} VA`).join(', '), va: drSum, sub: true });
+    const apps = (s.appliances || []).filter(x => num(x.va));
+    const appSum = apps.reduce((t, x) => t + num(x.va), 0);
+    if (appSum) lines.push({ ref: '120.82(B)(3)–(4)', label: 'Fastened-in-place appliances & motors', detail: `${apps.length} item(s) at nameplate`, va: appSum, sub: true });
+    const oth = (s.other || []).filter(x => num(x.va)); const othSum = oth.reduce((t, x) => t + num(x.va), 0);
+    if (othSum) lines.push({ ref: '120.82(B)(3)', label: 'Other loads (nameplate)', detail: oth.map(x => x.name || 'Other').join(', '), va: othSum, sub: true });
+    const G = gl + sav + ckSum + drSum + appSum + othSum;
+    const gDem = Math.min(G, 8000) + Math.max(0, G - 8000) * 0.4;
+    lines.push({ ref: '120.82(B)', label: 'General load demand', detail: `${fmt(G)} VA: first 8,000 at 100%, remainder at 40%`, va: gDem });
+    // (C) heating & cooling — largest of
+    const h = hvacParts(s.hvac || {});
+    const opts = [];
+    if (h.cool) opts.push({ d: `A/C or heat pump cooling at 100%: ${fmt(h.cool)} VA`, va: h.cool });
+    if (h.type === 'heatpump') {
+      if (!h.supp) opts.push({ d: `Heat pump, no supplemental heat, at 100%: ${fmt(h.comp)} VA`, va: h.comp });
+      else if (h.interlock) opts.push({ d: `Heat pump interlocked: larger of compressor ${fmt(h.comp)} or 65% of supplemental ${fmt(h.supp)} VA`, va: Math.max(h.comp, 0.65 * h.supp) });
+      else opts.push({ d: `Heat pump compressor ${fmt(h.comp)} at 100% + 65% of supplemental ${fmt(h.supp)} VA`, va: h.comp + 0.65 * h.supp });
+    }
+    if (h.type === 'furnace' && h.heat) opts.push({ d: `Central electric heat at 65%: ${fmt(h.heat)} VA`, va: 0.65 * h.heat });
+    if (h.type === 'space' && h.heat) opts.push(h.units >= 4 ? { d: `${h.units} separately controlled heaters at 40%: ${fmt(h.heat)} VA`, va: 0.4 * h.heat }
+      : { d: `${h.units} separately controlled heater(s) at 65%: ${fmt(h.heat)} VA`, va: 0.65 * h.heat });
+    if (h.type === 'storage' && h.heat) opts.push({ d: `Thermal storage at 100%: ${fmt(h.heat)} VA`, va: h.heat });
+    opts.forEach(o => o.va += h.blower);
+    opts.sort((a, b) => b.va - a.va);
+    if (opts.length) lines.push({ ref: '120.82(C)', label: 'Heating / A/C (largest option)', detail: opts[0].d + (h.blower ? ` + blower ${fmt(h.blower)} VA` : '') + (opts.length > 1 ? ` (next: ${fmt(opts[1].va)} VA)` : ''), va: opts[0].va });
+    (s.evse || []).filter(e => num(e.va) || num(e.setpoint)).forEach(e => { const r = evseVA(e); lines.push({ ref: '120.82(D) / 120.57', label: e.name || 'EV charger', detail: r.how + ' at 100%', va: r.va }); });
+    const total = lines.filter(l => !l.sub).reduce((t, l) => t + l.va, 0);
+    const res = finish(lines, total, warn);
+    if (res.amps < 100) res.warn.push('Optional method applies only where the service or feeder ampacity is 100 A or more (120.82(A)). Minimum one-family service is 100 A (230.79(C)).');
+    return res;
+  }
+
+  function finish(lines, total, warn) {
+    const a = amps(total), svc = serviceFor(a);
+    if (!svc) warn.push('Calculated load exceeds 600 A single-phase. Review the design.');
+    return { lines, total, amps: a, exactAmps: total / V, service: svc, conductors: CONDUCTORS[svc] || null, warn };
+  }
+
+  function circuits(sqft) { // 120.13 minimum general-purpose circuits at 3 VA/ft²
+    const a = num(sqft) * 3 / 120; return { va: num(sqft) * 3, c15: Math.ceil(a / 15), c20: Math.ceil(a / 20) };
+  }
+
+  return { standard, optional, circuits, cooking, amps, fmt };
+})();
+
+
+(function(){
+const KEY='vision-loadcalc-v1';
+const JOB_FIELDS=[['company','Company'],['customer','Customer'],['address','Job address'],['city','City, State'],['permit','Permit #'],['preparedBy','Prepared by'],['license','License #'],['date','Date'],['notes','Notes']];
+const example=()=>({method:'optional',
+  job:{company:'',customer:'',address:'',city:'',permit:'',preparedBy:'',license:'',date:'',notes:''},
+  sqft:3200,sa:3,laundry:1,cookCombine:false,
+  cooking:[{name:'Cooktop',kw:7.4},{name:'Wall oven',kw:4.8}],
+  dryers:[{name:'Dryer',va:5600}],
+  appliances:[{name:'Water heater',va:4500,motor:false},{name:'Dishwasher',va:1200,motor:false},{name:'Disposal',va:900,motor:true},{name:'Built-in microwave',va:1500,motor:false}],
+  hvac:{cool:5760,heatType:'heatpump',heat:0,hpComp:5760,hpSupp:10000,interlock:false,units:1,blower:1200},
+  evse:[{name:'Garage EV charger',va:11520,setpoint:''}],
+  other:[]});
+const blank=()=>({method:S?S.method:'optional',job:Object.fromEntries(JOB_FIELDS.map(f=>[f[0],''])),sqft:'',sa:2,laundry:1,cookCombine:false,cooking:[{name:'Range',kw:''}],dryers:[{name:'Dryer',va:''}],appliances:[{name:'Water heater',va:'',motor:false}],hvac:{cool:'',heatType:'none',heat:'',hpComp:'',hpSupp:'',interlock:false,units:1,blower:''},evse:[],other:[]});
+let S=null; let isExample=true;
+try{const raw=localStorage.getItem(KEY); if(raw){const o=JSON.parse(raw); S=o.state; isExample=!!o.example;}}catch(e){}
+if(!S){S=example(); isExample=true;}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify({state:S,example:isExample}))}catch(e){}};
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt=LC.fmt;
+
+const LISTS={
+  cooking:{cols:[['name','text','Appliance'],['kw','number','kW']],blank:{name:'',kw:''},add:'Add cooking appliance'},
+  dryers:{cols:[['name','text','Dryer'],['va','number','VA']],blank:{name:'Dryer',va:''},add:'Add dryer'},
+  appliances:{cols:[['name','text','Appliance'],['va','number','VA']],motor:true,blank:{name:'',va:'',motor:false},add:'Add appliance'},
+  evse:{cols:[['name','text','Charger'],['va','number','Nameplate VA'],['setpoint','number','Setpoint VA']],ev:true,blank:{name:'EV charger',va:'',setpoint:''},add:'Add EV charger'},
+  other:{cols:[['name','text','Load'],['va','number','VA']],blank:{name:'',va:''},add:'Add load'}
+};
+function renderList(key){
+  const cfg=LISTS[key], box=$('list-'+key), arr=S[key];
+  let h='';
+  if(arr.length){
+    h+=`<div class="row ${cfg.motor?'':cfg.ev?'ev':'nomotor'} rowhead">`+cfg.cols.map(c=>`<span>${c[2]}</span>`).join('')+(cfg.motor?'<span></span>':'')+'<span></span></div>';
+  }
+  arr.forEach((r,i)=>{
+    h+=`<div class="row ${cfg.motor?'':cfg.ev?'ev':'nomotor'}">`+cfg.cols.map((c,ci)=>`<input class="${ci===2?'sp':''}" id="${key}-${i}-${c[0]}" aria-label="${c[2]} ${i+1}" type="${c[1]}" ${c[1]==='number'?'min="0" step="any" inputmode="decimal"':''} data-l="${key}" data-i="${i}" data-k="${c[0]}" value="${esc(r[c[0]])}" ${c[0]==='setpoint'?'placeholder="—"':''}>`).join('')
+      +(cfg.motor?`<label class="chk"><input type="checkbox" id="${key}-${i}-motor" data-l="${key}" data-i="${i}" data-k="motor" ${r.motor?'checked':''}> Motor</label>`:'')
+      +`<button class="x" type="button" aria-label="Remove row ${i+1}" data-rm="${key}" data-i="${i}">×</button></div>`;
+  });
+  h+=`<button class="add" type="button" data-addl="${key}">+ ${cfg.add}</button>`;
+  box.innerHTML=h;
+}
+function renderJob(){
+  $('jobfields').innerHTML=JOB_FIELDS.map(([k,l])=>`<label class="f"${k==='notes'||k==='address'?' style="grid-column:1/-1"':''}>${l}<input id="job-${k}" data-job="${k}" type="${k==='date'?'date':'text'}" value="${esc(S.job[k])}"></label>`).join('');
+  const any=JOB_FIELDS.some(f=>String(S.job[f[0]]||'').trim());
+  if(any) $('jobbox').open=true;
+}
+function renderHVAC(){
+  const h=S.hvac, t=h.heatType;
+  const f=(id,l,v,extra='')=>`<label class="f"${extra}>${l}<input type="number" min="0" step="any" inputmode="decimal" id="hv-${id}" data-hv="${id}" value="${esc(v)}"></label>`;
+  let x=f('cool','Cooling (A/C or heat pump) VA',h.cool);
+  x+=`<label class="f">Electric heat<select id="hv-heatType" data-hv="heatType">
+    ${[['none','None (gas, etc.)'],['heatpump','Heat pump'],['furnace','Central electric furnace / strips'],['space','Separately controlled space heaters'],['storage','Electric thermal storage']].map(o=>`<option value="${o[0]}"${t===o[0]?' selected':''}>${o[1]}</option>`).join('')}</select></label>`;
+  if(t==='heatpump'){x+=f('hpComp','Heat pump compressor VA',h.hpComp)+f('hpSupp','Supplemental heat VA',h.hpSupp);}
+  if(t==='furnace'||t==='storage') x+=f('heat','Heating nameplate VA',h.heat);
+  if(t==='space') x+=f('heat','Total heater VA',h.heat)+`<label class="f">Number of units<input type="number" min="1" step="1" id="hv-units" data-hv="units" value="${esc(h.units)}"></label>`;
+  x+=f('blower','Air handler / blower VA',h.blower);
+  $('hvacfields').innerHTML=x+(t==='heatpump'?`<label class="chk" style="grid-column:1/-1"><input type="checkbox" id="hv-interlock" data-hv="interlock" ${h.interlock?'checked':''}> Compressor and supplemental heat are prevented from running together</label>`:'');
+}
+function renderMethodText(){
+  const opt=S.method==='optional';
+  $('dryerHint').textContent=opt?'Nameplate VA, added to the general load.':'Counted at the larger of 5,000 VA or nameplate.';
+  $('appHint').textContent=opt?'Water heater, dishwasher, disposal, built-in microwave, well or pool pump, hot tub. Nameplate VA, added to the general load. Leave out HVAC equipment.':'Water heater, dishwasher, disposal, built-in microwave, well or pool pump, hot tub. Four or more are taken at 75%. Tick Motor so the largest motor gets its 25% (120.50). Leave out HVAC equipment.';
+  $('hvacRef').textContent=opt?'120.82(C)':'120.51 · 120.60';
+  $('hvacHint').textContent=opt?'The largest of the 120.82(C) options is used. Central heat counts at 65%, heat pump supplemental at 65%, four or more separately controlled heaters at 40%. Blower VA is added at 100%.':'Heating and cooling are noncoincident, so only the larger is used. Blower VA is added to both sides.';
+  $('otherRef').textContent=opt?'120.82(B)(3)':'at 100%';
+  $('otherHint').textContent=opt?'Any other nameplate load (shop equipment, sauna, sub-panel loads). Added to the general load.':'Any other load to carry at 100% (sauna, shop equipment, a load you want kept out of the 75% appliance group).';
+  $('combineWrap').hidden=opt;
+  document.querySelectorAll('.tab').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.m===S.method)));
+}
+function renderAll(){
+  renderJob();
+  $('sqft').value=S.sqft; $('sa').value=S.sa; $('laundry').value=S.laundry; $('cookCombine').checked=!!S.cookCombine;
+  Object.keys(LISTS).forEach(renderList); renderHVAC(); renderMethodText(); renderResult();
+}
+function renderResult(){
+  const m=S.method, r=LC[m](S), other=LC[m==='optional'?'standard':'optional'](S);
+  const cc=LC.circuits(S.sqft);
+  const cond=r.conductors?`${r.conductors[0]} Cu / ${r.conductors[1]} Al`:'—';
+  let rows=r.lines.map(l=>`<tr class="${l.sub?'sub':''}"><td><span class="rf">${esc(l.ref)}</span>${esc(l.label)}<span class="dt">${esc(l.detail)}</span></td><td class="va">${fmt(l.va)}</td></tr>`).join('');
+  rows+=`<tr class="tot"><td style="padding-left:18px">Calculated load</td><td class="va">${fmt(r.total)} VA</td></tr>`;
+  $('result').innerHTML=`
+    <div class="plate">
+      <div><div class="lbl">${m==='optional'?'Optional method · 120.82':'Standard method · Part III'}${isExample?' · example':''}</div><div class="svc">${r.service||'—'}<span>A</span></div><div class="lbl">Minimum service</div></div>
+      <div class="calc">${fmt(r.total)} VA<br>÷ 240 V<br><b>${r.amps} A</b></div>
+    </div>
+    <dl class="meta">
+      <dt>Typical conductors</dt><dd>${cond}</dd>
+      <dt>Min. GP circuits (120.13)</dt><dd>${S.sqft?`${cc.c15} × 15 A or ${cc.c20} × 20 A (${fmt(cc.va)} VA at 3 VA/ft²)`:'—'}</dd>
+    </dl>
+    ${r.warn.length?`<div class="warnbox" style="margin-top:12px">${r.warn.map(w=>`<p>${esc(w)}</p>`).join('')}</div>`:''}
+    <div style="overflow-x:auto"><table class="ws"><tbody>${rows}</tbody></table></div>
+    <div class="compare"><span>${m==='optional'?'Standard':'Optional'} method: <b style="color:var(--ink)">${other.amps} A → ${other.service||'—'} A</b></span><button type="button" data-switch="${m==='optional'?'standard':'optional'}">View ${m==='optional'?'standard':'optional'}</button></div>
+    <div class="actions">
+      <button class="btn" type="button" id="pdfBtn">Download PDF</button>
+      <button class="btn ghost" type="button" id="exBtn">Load NEC example</button>
+      <button class="btn ghost" type="button" id="clrBtn">Clear all</button>
+    </div>
+    <div class="status" id="status">${isExample?'Example house shown. Clear all to start a new job.':''}</div>`;
+  $('mbar').innerHTML=`<span>${m==='optional'?'Optional':'Standard'}: ${r.amps} A → ${r.service||'—'} A service</span><a href="#result">Worksheet</a>`;
+}
+function touched(){ if(isExample){isExample=false;} save(); }
+document.addEventListener('input',e=>{
+  const t=e.target, d=t.dataset;
+  if(d.l){S[d.l][+d.i][d.k]=t.type==='checkbox'?t.checked:t.value;}
+  else if(d.job){S.job[d.job]=t.value;}
+  else if(d.hv){S.hvac[d.hv]=t.type==='checkbox'?t.checked:t.value; if(d.hv==='heatType'){renderHVAC();}}
+  else if(['sqft','sa','laundry'].includes(t.id)){S[t.id]=t.value;}
+  else if(t.id==='cookCombine'){S.cookCombine=t.checked;}
+  else return;
+  touched(); renderResult();
+});
+document.addEventListener('change',e=>{ if(e.target.dataset.hv==='heatType'||e.target.type==='checkbox'){ /* handled on input */ } });
+document.addEventListener('click',e=>{
+  const b=e.target.closest('button,summary'); if(!b) return;
+  if(b.dataset.m){S.method=b.dataset.m; save(); renderMethodText(); renderResult(); return;}
+  if(b.dataset.switch){S.method=b.dataset.switch; save(); renderMethodText(); renderResult(); window.scrollTo({top:0,behavior:'smooth'}); return;}
+  if(b.dataset.addl){S[b.dataset.addl].push({...LISTS[b.dataset.addl].blank}); touched(); renderList(b.dataset.addl); renderResult(); const ins=$('list-'+b.dataset.addl).querySelectorAll('input[type=text]'); ins[ins.length-1]?.focus(); return;}
+  if(b.dataset.rm){S[b.dataset.rm].splice(+b.dataset.i,1); touched(); renderList(b.dataset.rm); renderResult(); return;}
+  if(b.id==='exBtn'){if(b.dataset.armed){const m=S.method; const job=S.job; S=example(); S.method=m; S.job=job; isExample=true; save(); renderAll();} else {b.dataset.armed='1'; b.textContent='Tap again to load example'; setTimeout(()=>{if(b.isConnected){delete b.dataset.armed; b.textContent='Load NEC example';}},3000);} return;}
+  if(b.id==='clrBtn'){if(b.dataset.armed){S=blank(); isExample=false; save(); renderAll(); $('status').textContent='Cleared. Enter the new job.';} else {b.dataset.armed='1'; b.textContent='Tap again to clear'; setTimeout(()=>{if(b.isConnected){delete b.dataset.armed; b.textContent='Clear all';}},3000);} return;}
+  if(b.id==='pdfBtn'){makePDF(b); return;}
+});
+$('jobbox').addEventListener('toggle',()=>{$('jobbox').querySelector('.tog').textContent=$('jobbox').open?'Hide':'Show';});
+
+let dl=null, dlTried=false;
+async function getDL(){ if(!dlTried){dlTried=true; try{dl=await window.claude?.use?.('downloads');}catch(e){dl=null;}} return dl; }
+async function makePDF(btn){
+  const st=$('status');
+  if(!window.jspdf){st.textContent='The PDF library did not load. Check your connection and reload the page.';return;}
+  btn.disabled=true; st.textContent='Building PDF…';
+  try{
+    const m=S.method, r=LC[m](S);
+    const {jsPDF}=window.jspdf; const doc=new jsPDF({unit:'pt',format:'letter'});
+    const W=doc.internal.pageSize.getWidth(), M=48; let y=M;
+    const blue=[120,184,63], ink=[30,30,30], mut=[96,96,96];
+    doc.setFont('helvetica','bold'); doc.setFontSize(18); doc.setTextColor(...ink);
+    doc.text('Dwelling Service Load Calculation',M,y); y+=18;
+    doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(...mut);
+    doc.text((m==='optional'?'Optional method, NEC 2026 120.82':'Standard method, NEC 2026 Article 120 Part III')+'  ·  120/240 V, single-phase, 3-wire',M,y); y+=16;
+    const job=JOB_FIELDS.filter(([k])=>String(S.job[k]||'').trim()).map(([k,l])=>[l,k==='date'?fmtDate(S.job[k]):String(S.job[k]).trim()]);
+    if(job.length){
+      doc.autoTable({startY:y,body:job,theme:'plain',margin:{left:M,right:M},styles:{fontSize:10,cellPadding:{top:2,bottom:2,left:0,right:8},textColor:ink},columnStyles:{0:{fontStyle:'bold',cellWidth:90,textColor:mut}}});
+      y=doc.lastAutoTable.finalY+10;
+    }
+    // result band
+    doc.setFillColor(...blue); doc.rect(M,y,W-2*M,52,'F');
+    doc.setTextColor(...ink); doc.setFont('helvetica','bold'); doc.setFontSize(9);
+    doc.text('MINIMUM SERVICE',M+14,y+16); doc.setFontSize(24); doc.text(`${r.service||'—'} A`,M+14,y+42);
+    doc.setFont('helvetica','normal'); doc.setFontSize(11);
+    doc.text(`${fmt(r.total)} VA ÷ 240 V = ${r.amps} A`,W-M-14,y+24,{align:'right'});
+    if(r.conductors) {doc.setFontSize(9); doc.text(`Typical conductors: ${r.conductors[0]} Cu / ${r.conductors[1]} Al (83%, 310.12)`,W-M-14,y+40,{align:'right'});}
+    y+=66;
+    const P=s=>String(s).replace(/→/g,'->').replace(/≤/g,'<=').replace(/Φ/g,'ph');
+    const body=r.lines.map(l=>[l.ref,{content:P(l.label+'\n'+l.detail)},l.sub?`(${fmt(l.va)})`:fmt(l.va)]);
+    body.push([{content:'',styles:{}},{content:'Calculated load',styles:{fontStyle:'bold'}},{content:fmt(r.total)+' VA',styles:{fontStyle:'bold'}}]);
+    doc.autoTable({startY:y,head:[['NEC ref.','Load','VA']],body,margin:{left:M,right:M},theme:'grid',
+      headStyles:{fillColor:[237,245,225],textColor:ink,fontStyle:'bold',lineColor:[224,224,224]},
+      styles:{fontSize:9,cellPadding:5,textColor:ink,lineColor:[224,224,224],valign:'top'},
+      columnStyles:{0:{cellWidth:92,textColor:mut,font:'courier'},2:{cellWidth:72,halign:'right',font:'courier'}},
+      didParseCell:d=>{ if(d.section==='body'&&r.lines[d.row.index]?.sub){d.cell.styles.textColor=mut;} }});
+    y=doc.lastAutoTable.finalY+12;
+    doc.setFontSize(8.5); doc.setTextColor(...mut);
+    const notes=[];
+    if(m==='optional') notes.push('Values in parentheses are general-load components; they are totaled into the 120.82(B) demand line.');
+    else notes.push('Values in parentheses are components of the Table 120.42 general lighting demand line.');
+    r.warn.forEach(w=>notes.push(w));
+    if(S.sqft){const cc=LC.circuits(S.sqft); notes.push(`Minimum general-purpose branch circuits (120.13, 3 VA/ft²): ${cc.c15} × 15 A or ${cc.c20} × 20 A.`);}
+    notes.push('Calculated per the 2026 NEC as adopted by the Colorado State Electrical Board (effective Aug 1, 2026). Verify against the adopted code and local amendments.');
+    notes.forEach(n=>{const ls=doc.splitTextToSize('• '+P(n),W-2*M); if(y+ls.length*11>doc.internal.pageSize.getHeight()-60){doc.addPage();y=M;} doc.text(ls,M,y); y+=ls.length*11+2;});
+    if(String(S.job.preparedBy||'').trim()||String(S.job.license||'').trim()){
+      y+=26; if(y>doc.internal.pageSize.getHeight()-40){doc.addPage();y=M+20;}
+      doc.setDrawColor(...mut); doc.line(M,y,M+240,y); doc.line(M+280,y,M+400,y);
+      doc.setTextColor(...mut); doc.text('Signature',M,y+11); doc.text('Date',M+280,y+11);
+    }
+    const bytes=doc.output('arraybuffer');
+    const name=('Load calc '+(S.job.address||S.job.customer||'')+' '+(m==='optional'?'optional':'standard')).replace(/[^\w\s#.-]/g,'').replace(/\s+/g,' ').trim()+'.pdf';
+    const d=await getDL();
+    if(!d){doc.save(name); st.textContent='PDF downloaded: '+name; return;}
+    try{await d.save({filename:name,data:bytes}); st.textContent='PDF saved: '+name;}
+    catch(err){st.textContent=err&&err.code==='declined'?'Download cancelled.':err&&err.code==='rate_limited'?'A save prompt is already open. Try again in a moment.':'The PDF could not be saved here. Open this page in claude.ai and try again.';}
+  }catch(err){st.textContent='Could not build the PDF: '+(err&&err.message||err);}
+  finally{btn.disabled=false;}
+}
+function fmtDate(v){const p=String(v).split('-'); return p.length===3?`${+p[1]}/${+p[2]}/${p[0]}`:v;}
+renderAll();
+})();
+</script>
+
+</body></html>
