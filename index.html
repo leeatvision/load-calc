@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
-<title>Dwelling Load Calc</title>
+<title>Residential Service Sizing</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 </head><body>
 <style>
@@ -88,7 +88,8 @@ details.job[open] summary{margin-bottom:10px}
 .warnbox p{margin:0} .warnbox p+p{margin-top:6px}
 .compare{margin:12px 18px;display:flex;justify-content:space-between;gap:10px;align-items:center;font-size:13px;color:var(--muted);flex-wrap:wrap}
 .compare button{appearance:none;border:1px solid var(--line);background:var(--sunk);color:var(--ink);border-radius:4px;padding:6px 10px;font:inherit;font-size:13px;cursor:pointer}
-.actions{display:flex;flex-wrap:wrap;gap:8px;padding:14px 18px 10px}
+.actions{display:flex;flex-wrap:nowrap;gap:8px;padding:14px 18px 10px}
+.actions .btn{flex:1 1 auto;min-width:0;white-space:nowrap;padding:9px 8px;font-size:14px;text-align:center}
 .status:empty{display:none}
 .btn{appearance:none;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);border-radius:4px;padding:9px 14px;font:inherit;font-weight:600;cursor:pointer;transition:background-color 150ms cubic-bezier(0.4,0,0.2,1)}
 .btn:not(.ghost):not(:disabled):hover{background:var(--accent-hover);border-color:var(--accent-hover)}
@@ -106,8 +107,8 @@ details.job[open] summary{margin-bottom:10px}
 <div class="wrap">
   <header class="top">
     <div>
-      <div class="eyebrow">Vision Electrical · Residential service sizing</div>
-      <h1>Dwelling Load Calc</h1>
+      <div class="eyebrow">Vision Electrical Services</div>
+      <h1>Residential Service Sizing</h1>
     </div>
     <div class="code">NEC 2026 · Art. 120 · 120/240 V, 1Φ, 3-wire</div>
   </header>
@@ -482,8 +483,8 @@ document.addEventListener('click',e=>{
   if(b.dataset.switch){S.method=b.dataset.switch; save(); renderMethodText(); renderResult(); window.scrollTo({top:0,behavior:'smooth'}); return;}
   if(b.dataset.addl){S[b.dataset.addl].push({...LISTS[b.dataset.addl].blank}); touched(); renderList(b.dataset.addl); renderResult(); const ins=$('list-'+b.dataset.addl).querySelectorAll('input[type=text]'); ins[ins.length-1]?.focus(); return;}
   if(b.dataset.rm){S[b.dataset.rm].splice(+b.dataset.i,1); touched(); renderList(b.dataset.rm); renderResult(); return;}
-  if(b.id==='exBtn'){if(b.dataset.armed){const m=S.method; const job=S.job; S=example(); S.method=m; S.job=job; isExample=true; save(); renderAll();} else {b.dataset.armed='1'; b.textContent='Tap again to load example'; setTimeout(()=>{if(b.isConnected){delete b.dataset.armed; b.textContent='Load NEC example';}},3000);} return;}
-  if(b.id==='clrBtn'){if(b.dataset.armed){S=blank(); isExample=false; save(); renderAll(); $('status').textContent='Cleared. Enter the new job.';} else {b.dataset.armed='1'; b.textContent='Tap again to clear'; setTimeout(()=>{if(b.isConnected){delete b.dataset.armed; b.textContent='Clear all';}},3000);} return;}
+  if(b.id==='exBtn'){if(b.dataset.armed){const m=S.method; const job=S.job; S=example(); S.method=m; S.job=job; isExample=true; save(); renderAll();} else {b.dataset.armed='1'; b.textContent='Tap to confirm'; setTimeout(()=>{if(b.isConnected){delete b.dataset.armed; b.textContent='Load NEC example';}},3000);} return;}
+  if(b.id==='clrBtn'){if(b.dataset.armed){S=blank(); isExample=false; save(); renderAll(); $('status').textContent='Cleared. Enter the new job.';} else {b.dataset.armed='1'; b.textContent='Tap to confirm'; setTimeout(()=>{if(b.isConnected){delete b.dataset.armed; b.textContent='Clear all';}},3000);} return;}
   if(b.id==='pdfBtn'){makePDF(b); return;}
 });
 $('jobbox').addEventListener('toggle',()=>{$('jobbox').querySelector('.tog').textContent=$('jobbox').open?'Hide':'Show';});
