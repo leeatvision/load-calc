@@ -250,37 +250,40 @@ const LC = (() => {
   // Table 120.55 for a set of cooking appliances (kW). Returns {va, notes[]}
   function cooking(list, combine) {
     const kws = list.map(c => num(c.kw)).filter(k => k > 0);
-    if (!kws.length) return { va: 0, notes: ['No electric cooking'] };
+    if (!kws.length) return { va: 0, notes: ['No electric cooking'], parts: [] };
     if (combine) {
       const total = kws.reduce((a, b) => a + b, 0);
       const r = cooking([{ kw: total }], false);
       r.notes.unshift(`Note 4: ${kws.length} unit(s) treated as one ${total.toFixed(2)} kW range`);
+      r.parts.forEach(p => { p.label = 'Combined as one range (Note 4)'; p.qty = kws.length; p.qu = 'appliances'; });
       return r;
     }
     const small = kws.filter(k => k <= 1.75), a = kws.filter(k => k > 1.75 && k < 3.5),
       b = kws.filter(k => k >= 3.5 && k <= 8.75), c = kws.filter(k => k > 8.75);
-    let kw = 0; const notes = [];
-    if (small.length) { const s = small.reduce((x, y) => x + y, 0); kw += s; notes.push(`${small.length} unit(s) ≤1¾ kW at nameplate: ${s.toFixed(2)} kW`); }
-    if (a.length) { const s = a.reduce((x, y) => x + y, 0), f = COL_A[Math.min(a.length, 12) - 1]; kw += s * f / 100; notes.push(`Col A, ${a.length} unit(s): ${s.toFixed(2)} kW × ${f}%`); }
-    if (b.length) { const s = b.reduce((x, y) => x + y, 0), f = COL_B[Math.min(b.length, 12) - 1]; kw += s * f / 100; notes.push(`Col B, ${b.length} unit(s): ${s.toFixed(2)} kW × ${f}%`); }
+    let kw = 0; const notes = [], parts = [];
+    if (small.length) { const s = small.reduce((x, y) => x + y, 0); kw += s; notes.push(`${small.length} unit(s) ≤1¾ kW at nameplate: ${s.toFixed(2)} kW`); parts.push({ label: 'Units 1¾ kW or less', qty: small.length, qu: 'appliances', conn: s * 1000, pct: 100, va: s * 1000, basis: 'Counted at nameplate' }); }
+    if (a.length) { const s = a.reduce((x, y) => x + y, 0), f = COL_A[Math.min(a.length, 12) - 1]; kw += s * f / 100; notes.push(`Col A, ${a.length} unit(s): ${s.toFixed(2)} kW × ${f}%`); parts.push({ label: 'Column A units', qty: a.length, qu: 'appliances', conn: s * 1000, pct: f, va: s * f * 10, basis: 'Column A demand factor, over 1¾ kW to under 3½ kW' }); }
+    if (b.length) { const s = b.reduce((x, y) => x + y, 0), f = COL_B[Math.min(b.length, 12) - 1]; kw += s * f / 100; notes.push(`Col B, ${b.length} unit(s): ${s.toFixed(2)} kW × ${f}%`); parts.push({ label: 'Column B units', qty: b.length, qu: 'appliances', conn: s * 1000, pct: f, va: s * f * 10, basis: 'Column B demand factor, 3½ kW to 8¾ kW' }); }
     if (c.length) {
       const base = COL_C[Math.min(c.length, 12) - 1];
       const avg = c.map(k => Math.max(k, 12)).reduce((x, y) => x + y, 0) / c.length;
       const over = avg - 12, steps = over > 0 ? Math.floor(over) + ((over - Math.floor(over)) >= 0.5 ? 1 : 0) : 0;
       const val = base * (1 + 0.05 * steps);
       kw += val;
+      parts.push({ label: 'Column C units', qty: c.length, qu: 'appliances', conn: c.reduce((x, y) => x + y, 0) * 1000, rate: steps ? steps * 5 : '', ru: steps ? '% increase' : '', pct: '', va: val * 1000,
+        basis: steps ? 'Column C maximum demand, increased per Note ' + (c.length > 1 && new Set(c).size > 1 ? '2' : '1') : 'Column C maximum demand' });
       notes.push(steps ? `Col C, ${c.length} unit(s): ${base} kW + ${steps * 5}% (Note ${c.length > 1 && new Set(c).size > 1 ? '2' : '1'}, ${avg.toFixed(2)} kW rating) = ${val.toFixed(2)} kW`
         : `Col C, ${c.length} unit(s): ${base} kW`);
       if (c.some(k => k > 27)) notes.push('Unit over 27 kW: Table 120.55 does not cover it; calculate separately');
     }
-    return { va: kw * 1000, notes };
+    return { va: kw * 1000, notes, parts };
   }
 
   function evseVA(e) {
     const sp = num(e.setpoint);
-    if (sp) return { va: sp, how: `Load-managed setpoint (120.7)` };
+    if (sp) return { va: sp, how: `Load-managed setpoint (120.7)`, np: num(e.va), basis: 'Load-management setpoint (120.7)' };
     const np = num(e.va);
-    return np >= 7200 ? { va: np, how: 'Nameplate' } : { va: 7200, how: `7,200 VA minimum (nameplate ${fmt(np)} VA)` };
+    return np >= 7200 ? { va: np, how: 'Nameplate', np, basis: 'Nameplate (larger than the 7,200 VA minimum)' } : { va: 7200, how: `7,200 VA minimum (nameplate ${fmt(np)} VA)`, np, basis: '7,200 VA minimum applies' };
   }
 
   // Heating side details shared by both methods
@@ -296,25 +299,26 @@ const LC = (() => {
     // 1. General lighting group
     const gl = sqft * 2, sav = sa * 1500, lav = ld * 1500, grp = gl + sav + lav;
     const glDem = Math.min(grp, 3000) + Math.max(0, Math.min(grp, 120000) - 3000) * 0.35 + Math.max(0, grp - 120000) * 0.25;
-    lines.push({ ref: '120.41', label: 'General lighting and receptacles', detail: `${fmt(sqft)} ft² × 2 VA`, va: gl, sub: true });
-    lines.push({ ref: '120.52(A)', label: 'Small-appliance circuits', detail: `${sa} × 1,500 VA`, va: sav, sub: true });
-    lines.push({ ref: '120.52(B)', label: 'Laundry circuit', detail: `${ld} × 1,500 VA`, va: lav, sub: true });
-    lines.push({ ref: 'Table 120.42', label: 'General lighting demand', detail: `${fmt(grp)} VA: first 3,000 at 100%, next at 35%`, va: glDem });
+    lines.push({ ref: '120.41', label: 'General lighting and receptacles', detail: `${fmt(sqft)} ft² × 2 VA`, va: gl, sub: true, x: { qty: sqft, qu: 'ft²', rate: 2, ru: 'VA per ft²', conn: gl, basis: 'Dwelling unit load' } });
+    lines.push({ ref: '120.52(A)', label: 'Small-appliance circuits', detail: `${sa} × 1,500 VA`, va: sav, sub: true, x: { qty: sa, qu: 'circuits', rate: 1500, ru: 'VA per circuit', conn: sav, basis: 'Minimum of two circuits' } });
+    lines.push({ ref: '120.52(B)', label: 'Laundry circuit', detail: `${ld} × 1,500 VA`, va: lav, sub: true, x: { qty: ld, qu: 'circuits', rate: 1500, ru: 'VA per circuit', conn: lav, basis: '' } });
+    lines.push({ ref: 'Table 120.42', label: 'General lighting demand', detail: `${fmt(grp)} VA: first 3,000 at 100%, next at 35%`, va: glDem, x: { conn: grp, basis: 'First 3,000 VA at 100%, 3,001 to 120,000 VA at 35%, remainder at 25%' } });
     // 2. Fastened-in-place appliances
     const apps = (s.appliances || []).filter(x => num(x.va));
     const appSum = apps.reduce((t, x) => t + num(x.va), 0);
     const appDem = apps.length >= 4 ? appSum * 0.75 : appSum;
-    if (apps.length) lines.push({ ref: '120.53', label: 'Fastened-in-place appliances', detail: `${apps.length} appliance(s), ${fmt(appSum)} VA${apps.length >= 4 ? ' × 75%' : ' at 100% (fewer than 4)'}`, va: appDem });
+    if (apps.length) lines.push({ ref: '120.53', label: 'Fastened-in-place appliances', detail: `${apps.length} appliance(s), ${fmt(appSum)} VA${apps.length >= 4 ? ' × 75%' : ' at 100% (fewer than 4)'}`, va: appDem, x: { qty: apps.length, qu: 'appliances', conn: appSum, pct: apps.length >= 4 ? 75 : 100, basis: apps.length >= 4 ? '75% when four or more' : '100% when fewer than four' }, parts: apps.map(a => ({ label: a.name || 'Appliance', conn: num(a.va), basis: a.motor ? 'Motor' : '' })) });
     // 3. Dryers
     const dr = (s.dryers || []).filter(x => num(x.va));
     if (dr.length) {
       const dv = dr.reduce((t, x) => t + Math.max(5000, num(x.va)), 0);
-      lines.push({ ref: '120.54', label: 'Clothes dryer' + (dr.length > 1 ? 's' : ''), detail: dr.map(x => num(x.va) < 5000 ? `${fmt(num(x.va))} → 5,000 VA min` : `${fmt(num(x.va))} VA`).join(', '), va: dv });
+      lines.push({ ref: '120.54', label: 'Clothes dryer' + (dr.length > 1 ? 's' : ''), detail: dr.map(x => num(x.va) < 5000 ? `${fmt(num(x.va))} → 5,000 VA min` : `${fmt(num(x.va))} VA`).join(', '), va: dv, x: { qty: dr.length, qu: 'dryers', conn: dv, pct: 100, basis: 'Larger of 5,000 VA or nameplate, each' }, parts: dr.map(d => ({ label: d.name || 'Dryer', qty: num(d.va), qu: 'VA nameplate', conn: Math.max(5000, num(d.va)), basis: num(d.va) < 5000 ? '5,000 VA minimum applies' : 'Nameplate' })) });
       if (dr.length > 2) warn.push('More than two dryers: Table 120.54 demand factors may reduce this. Counted at 100% here.');
     }
     // 4. Cooking
     const ck = cooking(s.cooking || [], s.cookCombine);
-    if (ck.va) lines.push({ ref: 'Table 120.55', label: 'Cooking equipment', detail: ck.notes.join('; '), va: ck.va });
+    const ckList = (s.cooking || []).filter(c => num(c.kw));
+    if (ck.va) lines.push({ ref: 'Table 120.55', label: 'Cooking equipment', detail: ck.notes.join('; '), va: ck.va, x: { qty: ckList.length, qu: 'appliances', conn: ckList.reduce((t, c) => t + num(c.kw) * 1000, 0), basis: s.cookCombine ? 'Table 120.55, Note 4 (treated as one range)' : 'Table 120.55, by column' }, parts: ck.parts });
     ck.notes.filter(n => n.includes('27 kW')).forEach(n => warn.push(n));
     // 5. Heating vs cooling (120.60)
     const h = hvacParts(s.hvac || {});
@@ -329,7 +333,9 @@ const LC = (() => {
     const useHeat = heatTot >= coolTot;
     const hv = Math.max(heatTot, coolTot);
     if (hv) lines.push({ ref: '120.51 / 120.60', label: useHeat ? 'Heating (governs over cooling)' : 'Cooling (governs over heating)',
-      detail: (useHeat ? heatDesc : `A/C or heat pump cooling ${fmt(h.cool)} VA`) + (h.blower ? ` + blower ${fmt(h.blower)} VA` : '') + ` (other side: ${fmt(useHeat ? coolTot : heatTot)} VA, omitted)`, va: hv });
+      detail: (useHeat ? heatDesc : `A/C or heat pump cooling ${fmt(h.cool)} VA`) + (h.blower ? ` + blower ${fmt(h.blower)} VA` : '') + ` (other side: ${fmt(useHeat ? coolTot : heatTot)} VA, omitted)`, va: hv,
+      x: { conn: hv, pct: 100, basis: 'Larger of heating or cooling; the smaller is omitted (120.60)' },
+      parts: [{ label: 'Heating' + (h.blower && heatTot ? ', with blower' : ''), conn: heatTot, basis: useHeat ? 'Used' : 'Omitted' }, { label: 'Cooling' + (h.blower && coolTot ? ', with blower' : ''), conn: coolTot, basis: useHeat ? 'Omitted' : 'Used' }] });
     // 6. Largest motor 25%
     const motors = [];
     apps.filter(x => x.motor).forEach(x => motors.push({ n: x.name || 'Appliance motor', va: num(x.va) }));
@@ -339,11 +345,11 @@ const LC = (() => {
       if (useHeat && heatMotor) motors.push({ n: 'Heat pump compressor', va: heatMotor });
     }
     motors.sort((a, b) => b.va - a.va);
-    if (motors.length) lines.push({ ref: '120.50', label: '25% of largest motor', detail: `${motors[0].n}: ${fmt(motors[0].va)} VA × 25%`, va: motors[0].va * 0.25 });
+    if (motors.length) lines.push({ ref: '120.50', label: '25% of largest motor', detail: `${motors[0].n}: ${fmt(motors[0].va)} VA × 25%`, va: motors[0].va * 0.25, x: { conn: motors[0].va, pct: 25, basis: 'Largest motor: ' + motors[0].n } });
     // 7. EVSE
-    (s.evse || []).filter(e => num(e.va) || num(e.setpoint)).forEach(e => { const r = evseVA(e); lines.push({ ref: '120.57', label: e.name || 'EV charger', detail: r.how + ' at 100%', va: r.va }); });
+    (s.evse || []).filter(e => num(e.va) || num(e.setpoint)).forEach(e => { const r = evseVA(e); lines.push({ ref: '120.57', label: e.name || 'EV charger', detail: r.how + ' at 100%', va: r.va, x: { qty: r.np, qu: 'VA nameplate', conn: r.va, pct: 100, basis: r.basis } }); });
     // 8. Other loads at 100%
-    (s.other || []).filter(x => num(x.va)).forEach(x => lines.push({ ref: '—', label: x.name || 'Other load', detail: 'At 100%', va: num(x.va) }));
+    (s.other || []).filter(x => num(x.va)).forEach(x => lines.push({ ref: '—', label: x.name || 'Other load', detail: 'At 100%', va: num(x.va), x: { conn: num(x.va), pct: 100, basis: 'At 100%' } }));
     const total = lines.filter(l => !l.sub).reduce((t, l) => t + l.va, 0);
     return finish(lines, total, warn);
   }
@@ -352,37 +358,39 @@ const LC = (() => {
     const lines = [], warn = [];
     const sqft = num(s.sqft), sa = Math.max(2, parseInt(s.sa) || 0), ld = Math.max(0, parseInt(s.laundry) || 0);
     const gl = sqft * 2, sav = (sa + ld) * 1500;
-    lines.push({ ref: '120.82(B)(1)', label: 'General lighting and receptacles', detail: `${fmt(sqft)} ft² × 2 VA`, va: gl, sub: true });
-    lines.push({ ref: '120.82(B)(2)', label: 'Small-appliance and laundry circuits', detail: `${sa + ld} × 1,500 VA`, va: sav, sub: true });
+    lines.push({ ref: '120.82(B)(1)', label: 'General lighting and receptacles', detail: `${fmt(sqft)} ft² × 2 VA`, va: gl, sub: true, x: { qty: sqft, qu: 'ft²', rate: 2, ru: 'VA per ft²', conn: gl, basis: 'Dwelling unit load' } });
+    lines.push({ ref: '120.82(B)(2)', label: 'Small-appliance and laundry circuits', detail: `${sa + ld} × 1,500 VA`, va: sav, sub: true, x: { qty: sa + ld, qu: 'circuits', rate: 1500, ru: 'VA per circuit', conn: sav, basis: '' } });
     const ckSum = (s.cooking || []).reduce((t, c) => t + num(c.kw) * 1000, 0);
-    if (ckSum) lines.push({ ref: '120.82(B)(3)', label: 'Cooking equipment (nameplate)', detail: (s.cooking || []).filter(c => num(c.kw)).map(c => `${c.name || 'Cooking'} ${num(c.kw)} kW`).join(', '), va: ckSum, sub: true });
+    if (ckSum) lines.push({ ref: '120.82(B)(3)', label: 'Cooking equipment (nameplate)', detail: (s.cooking || []).filter(c => num(c.kw)).map(c => `${c.name || 'Cooking'} ${num(c.kw)} kW`).join(', '), va: ckSum, sub: true, x: { qty: (s.cooking || []).filter(c => num(c.kw)).length, qu: 'appliances', conn: ckSum, basis: 'Nameplate' }, parts: (s.cooking || []).filter(c => num(c.kw)).map(c => ({ label: c.name || 'Cooking', qty: num(c.kw), qu: 'kW', conn: num(c.kw) * 1000 })) });
     const drSum = (s.dryers || []).reduce((t, d) => t + num(d.va), 0);
-    if (drSum) lines.push({ ref: '120.82(B)(3)', label: 'Clothes dryer (nameplate)', detail: (s.dryers || []).filter(d => num(d.va)).map(d => `${fmt(num(d.va))} VA`).join(', '), va: drSum, sub: true });
+    if (drSum) lines.push({ ref: '120.82(B)(3)', label: 'Clothes dryer (nameplate)', detail: (s.dryers || []).filter(d => num(d.va)).map(d => `${fmt(num(d.va))} VA`).join(', '), va: drSum, sub: true, x: { qty: (s.dryers || []).filter(d => num(d.va)).length, qu: 'dryers', conn: drSum, basis: 'Nameplate' } });
     const apps = (s.appliances || []).filter(x => num(x.va));
     const appSum = apps.reduce((t, x) => t + num(x.va), 0);
-    if (appSum) lines.push({ ref: '120.82(B)(3)–(4)', label: 'Fastened-in-place appliances and motors', detail: `${apps.length} item(s) at nameplate`, va: appSum, sub: true });
+    if (appSum) lines.push({ ref: '120.82(B)(3)–(4)', label: 'Fastened-in-place appliances and motors', detail: `${apps.length} item(s) at nameplate`, va: appSum, sub: true, x: { qty: apps.length, qu: 'items', conn: appSum, basis: 'Nameplate' }, parts: apps.map(a => ({ label: a.name || 'Appliance', conn: num(a.va) })) });
     const oth = (s.other || []).filter(x => num(x.va)); const othSum = oth.reduce((t, x) => t + num(x.va), 0);
-    if (othSum) lines.push({ ref: '120.82(B)(3)', label: 'Other loads (nameplate)', detail: oth.map(x => x.name || 'Other').join(', '), va: othSum, sub: true });
+    if (othSum) lines.push({ ref: '120.82(B)(3)', label: 'Other loads (nameplate)', detail: oth.map(x => x.name || 'Other').join(', '), va: othSum, sub: true, x: { qty: oth.length, qu: 'items', conn: othSum, basis: 'Nameplate' }, parts: oth.map(o => ({ label: o.name || 'Other load', conn: num(o.va) })) });
     const G = gl + sav + ckSum + drSum + appSum + othSum;
     const gDem = Math.min(G, 8000) + Math.max(0, G - 8000) * 0.4;
-    lines.push({ ref: '120.82(B)', label: 'General load demand', detail: `${fmt(G)} VA: first 8,000 at 100%, remainder at 40%`, va: gDem });
+    lines.push({ ref: '120.82(B)', label: 'General load demand', detail: `${fmt(G)} VA: first 8,000 at 100%, remainder at 40%`, va: gDem, x: { conn: G, basis: 'First 8 kVA at 100%, remainder at 40%' } });
     // (C) heating and cooling — largest of
     const h = hvacParts(s.hvac || {});
     const opts = [];
-    if (h.cool) opts.push({ d: `A/C or heat pump cooling at 100%: ${fmt(h.cool)} VA`, va: h.cool });
+    if (h.cool) opts.push({ d: `A/C or heat pump cooling at 100%: ${fmt(h.cool)} VA`, va: h.cool, label: 'Cooling at 100%', conn: h.cool });
     if (h.type === 'heatpump') {
-      if (!h.supp) opts.push({ d: `Heat pump, no supplemental heat, at 100%: ${fmt(h.comp)} VA`, va: h.comp });
-      else if (h.interlock) opts.push({ d: `Heat pump interlocked: larger of compressor ${fmt(h.comp)} or 65% of supplemental ${fmt(h.supp)} VA`, va: Math.max(h.comp, 0.65 * h.supp) });
-      else opts.push({ d: `Heat pump compressor ${fmt(h.comp)} at 100% + 65% of supplemental ${fmt(h.supp)} VA`, va: h.comp + 0.65 * h.supp });
+      if (!h.supp) opts.push({ d: `Heat pump, no supplemental heat, at 100%: ${fmt(h.comp)} VA`, va: h.comp, label: 'Heat pump, no supplemental heat, at 100%', conn: h.comp });
+      else if (h.interlock) opts.push({ d: `Heat pump interlocked: larger of compressor ${fmt(h.comp)} or 65% of supplemental ${fmt(h.supp)} VA`, va: Math.max(h.comp, 0.65 * h.supp), label: 'Heat pump interlocked: larger of compressor or 65% of supplemental', conn: h.comp + h.supp });
+      else opts.push({ d: `Heat pump compressor ${fmt(h.comp)} at 100% + 65% of supplemental ${fmt(h.supp)} VA`, va: h.comp + 0.65 * h.supp, label: 'Heat pump compressor at 100% plus 65% of supplemental', conn: h.comp + h.supp });
     }
-    if (h.type === 'furnace' && h.heat) opts.push({ d: `Central electric heat at 65%: ${fmt(h.heat)} VA`, va: 0.65 * h.heat });
-    if (h.type === 'space' && h.heat) opts.push(h.units >= 4 ? { d: `${h.units} separately controlled heaters at 40%: ${fmt(h.heat)} VA`, va: 0.4 * h.heat }
-      : { d: `${h.units} separately controlled heater(s) at 65%: ${fmt(h.heat)} VA`, va: 0.65 * h.heat });
-    if (h.type === 'storage' && h.heat) opts.push({ d: `Thermal storage at 100%: ${fmt(h.heat)} VA`, va: h.heat });
-    opts.forEach(o => o.va += h.blower);
+    if (h.type === 'furnace' && h.heat) opts.push({ d: `Central electric heat at 65%: ${fmt(h.heat)} VA`, va: 0.65 * h.heat, label: 'Central electric heat at 65%', conn: h.heat });
+    if (h.type === 'space' && h.heat) opts.push(h.units >= 4 ? { d: `${h.units} separately controlled heaters at 40%: ${fmt(h.heat)} VA`, va: 0.4 * h.heat, label: 'Four or more separately controlled heaters at 40%', conn: h.heat }
+      : { d: `${h.units} separately controlled heater(s) at 65%: ${fmt(h.heat)} VA`, va: 0.65 * h.heat, label: 'Fewer than four separately controlled heaters at 65%', conn: h.heat });
+    if (h.type === 'storage' && h.heat) opts.push({ d: `Thermal storage at 100%: ${fmt(h.heat)} VA`, va: h.heat, label: 'Thermal storage at 100%', conn: h.heat });
+    opts.forEach(o => { o.va += h.blower; o.conn += h.blower; });
     opts.sort((a, b) => b.va - a.va);
-    if (opts.length) lines.push({ ref: '120.82(C)', label: 'Heating / A/C (largest option)', detail: opts[0].d + (h.blower ? ` + blower ${fmt(h.blower)} VA` : '') + (opts.length > 1 ? ` (next: ${fmt(opts[1].va)} VA)` : ''), va: opts[0].va });
-    (s.evse || []).filter(e => num(e.va) || num(e.setpoint)).forEach(e => { const r = evseVA(e); lines.push({ ref: '120.82(D) / 120.57', label: e.name || 'EV charger', detail: r.how + ' at 100%', va: r.va }); });
+    if (opts.length) lines.push({ ref: '120.82(C)', label: 'Heating / A/C (largest option)', detail: opts[0].d + (h.blower ? ` + blower ${fmt(h.blower)} VA` : '') + (opts.length > 1 ? ` (next: ${fmt(opts[1].va)} VA)` : ''), va: opts[0].va,
+      x: { conn: opts[0].conn, basis: 'Largest of the 120.82(C) options' + (h.blower ? '; blower included at 100%' : '') },
+      parts: opts.map((o, i) => ({ label: o.label, conn: o.conn, pct: o.conn ? Math.round(o.va / o.conn * 1000) / 10 : '', va: o.va, basis: i === 0 ? 'Used (largest)' : 'Not used' })) });
+    (s.evse || []).filter(e => num(e.va) || num(e.setpoint)).forEach(e => { const r = evseVA(e); lines.push({ ref: '120.82(D) / 120.57', label: e.name || 'EV charger', detail: r.how + ' at 100%', va: r.va, x: { qty: r.np, qu: 'VA nameplate', conn: r.va, pct: 100, basis: r.basis } }); });
     const total = lines.filter(l => !l.sub).reduce((t, l) => t + l.va, 0);
     const res = finish(lines, total, warn);
     if (res.amps < 100) res.warn.push('Optional method applies only where the service or feeder ampacity is 100 A or more (120.82(A)). Minimum one-family service is 100 A (230.79(C)).');
@@ -609,44 +617,98 @@ const XC={green:'FF78B83F',tint:'FFE2F2CE',pale:'FFF2F9EA',gray:'FFF4F4F4',line:
 const thin={style:'thin',color:{argb:XC.line}};
 const boxed={top:thin,left:thin,bottom:thin,right:thin};
 function addLogo(wb,ws,logo,col){ if(!logo) return; const id=wb.addImage({base64:logo.base64,extension:'png'}); const w=170, h=Math.round(w*logo.h/logo.w); ws.addImage(id,{tl:{col,row:0.15},ext:{width:w,height:h},editAs:'oneCell'}); }
+const splitSize=s=>{ const m=String(s||'').match(/^(\S+)\s+(\S+)$/); return m?[m[1],m[2]]:[s||'',''] };
+function sheetTitle(ws,title,sub,note){
+  [24,18,18].forEach((h,i)=>ws.getRow(i+1).height=h);
+  ws.getCell('A1').value=title; ws.getCell('A1').font={bold:true,size:16,color:{argb:XC.ink}};
+  ws.getCell('A2').value=sub; ws.getCell('A2').font={size:11,color:{argb:XC.muted}};
+  if(note){ ws.getCell('A3').value=note; ws.getCell('A3').font={italic:true,size:10,color:{argb:XC.note}}; }
+}
+function headerRow(ws,row,labels,rightCols){
+  labels.forEach((h,i)=>{ const c=ws.getCell(row,i+1); c.value=h; c.font={bold:true,color:{argb:XC.ink}}; c.fill={type:'pattern',pattern:'solid',fgColor:{argb:XC.tint}}; c.border=boxed; c.alignment={vertical:'middle',wrapText:true,horizontal:rightCols.includes(i)?'right':'left'}; });
+  ws.getRow(row).height=30;
+}
+const blankIf=v=>(v===''||v==null||(typeof v==='number'&&!isFinite(v)))?null:v;
+const r1=v=>typeof v==='number'?Math.round(v*10)/10:v;
 function resultsWS(wb,m,logo){
   const r=LC[m](S), cc=LC.circuits(S.sqft);
-  const ws=wb.addWorksheet(m==='optional'?'Optional 120.82':'Standard Part III',{views:[{showGridLines:false}],pageSetup:{orientation:'portrait',fitToPage:true,fitToWidth:1,fitToHeight:0,margins:{left:0.5,right:0.5,top:0.6,bottom:0.6,header:0.3,footer:0.3}}});
-  ws.columns=[{width:16},{width:34},{width:58},{width:13},{width:16}];
-  addLogo(wb,ws,logo,3.15);
-  ws.getRow(1).height=22; ws.getRow(2).height=18; ws.getRow(3).height=18;
-  ws.getCell('A1').value='Dwelling Service Load Calculation'; ws.getCell('A1').font={bold:true,size:16,color:{argb:XC.ink}};
-  ws.getCell('A2').value=m==='optional'?'Optional method, NEC 2026 120.82':'Standard method, NEC 2026 Article 120 Part III'; ws.getCell('A2').font={size:11,color:{argb:XC.muted}};
-  ws.getCell('A3').value='120/240 V, single-phase, 3-wire'; ws.getCell('A3').font={size:11,color:{argb:XC.muted}};
-  ws.getCell('A4').value='Calculated results. To change this job, edit the Inputs tab and upload this file to the calculator.'; ws.getCell('A4').font={italic:true,size:10,color:{argb:XC.note}};
-  let row=6;
-  const kv=(k,v,fmt,bold)=>{ const a=ws.getCell(row,1), b=ws.getCell(row,2); a.value=k; a.font={bold:true,color:{argb:XC.muted}}; b.value=v; if(fmt) b.numFmt=fmt; b.font={bold:!!bold,size:bold?14:11}; b.alignment={horizontal:'left'}; row++; };
+  const ws=wb.addWorksheet(m==='optional'?'Optional 120.82':'Standard Part III',{views:[{state:'frozen',ySplit:14,showGridLines:false}],pageSetup:{orientation:'landscape',fitToPage:true,fitToWidth:1,fitToHeight:0,margins:{left:0.4,right:0.4,top:0.5,bottom:0.5,header:0.3,footer:0.3}}});
+  ws.columns=[{width:15},{width:40},{width:11},{width:13},{width:9},{width:14},{width:14},{width:11},{width:14},{width:12},{width:52}];
+  addLogo(wb,ws,logo,8.7);
+  sheetTitle(ws,m==='optional'?'Optional method':'Standard method',m==='optional'?'NEC 2026 120.82, one-family dwelling, 120/240 V single-phase':'NEC 2026 Article 120 Part III, one-family dwelling, 120/240 V single-phase','Calculated results. To change this job, edit the Inputs tab and upload this file to the calculator.');
+  // key results: label | value | unit
+  let row=5;
+  const kv=(label,val,unit,fmt,bold)=>{ const a=ws.getCell(row,1), b=ws.getCell(row,3), u=ws.getCell(row,4);
+    ws.mergeCells(row,1,row,2); a.value=label; a.font={bold:true,color:{argb:XC.muted}};
+    b.value=blankIf(val); if(fmt) b.numFmt=fmt; b.font={bold:!!bold,size:bold?13:11}; b.alignment={horizontal:'right'};
+    u.value=unit||null; u.font={color:{argb:XC.muted}}; if(bold){ [a,b,u].forEach(c=>c.fill={type:'pattern',pattern:'solid',fgColor:{argb:XC.tint}}); } row++; };
+  const cu=splitSize(r.conductors&&r.conductors[0]), al=splitSize(r.conductors&&r.conductors[1]);
+  kv('Minimum service',r.service,'A','0',true);
+  kv('Calculated load',Math.round(r.total),'VA','#,##0');
+  kv('Voltage',240,'V','0');
+  kv('Calculated current',r.amps,'A','0');
+  kv('Typical copper conductor (83%, 310.12)',cu[0],cu[1]);
+  kv('Typical aluminum conductor (83%, 310.12)',al[0],al[1]);
+  kv('Minimum 15 A general-purpose circuits (120.13)',S.sqft?cc.c15:'','circuits','0');
+  kv('Minimum 20 A general-purpose circuits (120.13)',S.sqft?cc.c20:'','circuits','0');
+  row=14;
+  const R=[2,4,6,7,8];
+  headerRow(ws,row,['NEC ref.','Load','Quantity','Quantity unit','Rate','Rate unit','Connected (VA)','Demand (%)','Calculated (VA)','In total','Basis'],R);
+  ws.autoFilter={from:{row,column:1},to:{row,column:11}};
+  row++;
+  const write=(vals,style)=>{ vals.forEach((v,i)=>{ const c=ws.getCell(row,i+1); c.value=blankIf(v); c.border=boxed;
+      c.alignment={vertical:'top',wrapText:i===1||i===10,horizontal:R.includes(i)?'right':'left'};
+      if(i===2||i===4) c.numFmt='#,##0.###'; if(i===6||i===8) c.numFmt='#,##0'; if(i===7) c.numFmt='0.0';
+      c.font={size:style==='part'?10:11,bold:style==='total',italic:style==='part',color:{argb:style==='part'||style==='sub'?XC.muted:XC.ink}};
+      if(style==='sub') c.fill={type:'pattern',pattern:'solid',fgColor:{argb:XC.gray}};
+      if(style==='total') c.fill={type:'pattern',pattern:'solid',fgColor:{argb:XC.tint}}; });
+    row++; };
+  r.lines.forEach(l=>{ const x=l.x||{};
+    const pct=x.pct!==undefined&&x.pct!==''?x.pct:(!l.sub&&x.conn?r1(l.va/x.conn*100):'');
+    write([l.ref,l.label,x.qty,x.qu,x.rate,x.ru,x.conn,l.sub?'':pct,l.sub?'':Math.round(l.va),l.sub?'Component':'Yes',x.basis||''],l.sub?'sub':'line');
+    (l.parts||[]).forEach(p=>write(['','   '+p.label,p.qty,p.qu,p.rate,p.ru,p.conn!=null?Math.round(p.conn):'',p.pct,p.va!=null&&p.va!==''?Math.round(p.va):'','',p.basis||''],'part'));
+  });
+  write(['','Calculated load','','','','','','',Math.round(r.total),'',''],'total');
+  row++;
+  const notes=[...r.warn,'Component rows are totaled into the demand line below them and are not added again. Indented rows show what makes up the line above them.','Calculated per the 2026 NEC as adopted in Colorado (effective Aug 1, 2026). Verify against the adopted code and local amendments.'];
+  notes.forEach(n=>{ ws.mergeCells(row,1,row,11); const c=ws.getCell(row,1); c.value='• '+n; c.font={size:9,color:{argb:XC.muted}}; c.alignment={wrapText:true,vertical:'top'}; ws.getRow(row).height=Math.max(15,Math.ceil(n.length/170)*13); row++; });
+  return ws;
+}
+function summaryWS(wb,logo){
+  const ro=LC.optional(S), rs=LC.standard(S), cc=LC.circuits(S.sqft);
+  const ws=wb.addWorksheet('Summary',{views:[{showGridLines:false}],pageSetup:{orientation:'portrait',fitToPage:true,fitToWidth:1,fitToHeight:0,margins:{left:0.5,right:0.5,top:0.6,bottom:0.6,header:0.3,footer:0.3}}});
+  ws.columns=[{width:44},{width:14},{width:10},{width:14},{width:10}];
+  addLogo(wb,ws,logo,2.75);
+  sheetTitle(ws,'Dwelling Service Load Calculation','Summary of both methods, NEC 2026 Article 120','');
+  let row=5;
   const job=JOB_FIELDS.filter(([k])=>String(S.job[k]||'').trim());
-  job.forEach(([k,l])=>kv(l,k==='date'?fmtDate(S.job[k]):String(S.job[k]).trim()));
+  job.forEach(([k,l])=>{ ws.getCell(row,1).value=l; ws.getCell(row,1).font={bold:true,color:{argb:XC.muted}}; ws.mergeCells(row,2,row,5); const c=ws.getCell(row,2); c.value=k==='date'?fmtDate(S.job[k]):String(S.job[k]).trim(); c.alignment={wrapText:true}; row++; });
   if(job.length) row++;
-  const band=row; ['Minimum service','',r.service?r.service+' A':'—',''].forEach((v,i)=>{});
-  for(let c=1;c<=5;c++){ ws.getCell(band,c).fill={type:'pattern',pattern:'solid',fgColor:{argb:XC.green}}; ws.getCell(band+1,c).fill={type:'pattern',pattern:'solid',fgColor:{argb:XC.green}}; }
-  ws.getCell(band,1).value='MINIMUM SERVICE'; ws.getCell(band,1).font={bold:true,size:9,color:{argb:XC.ink}};
-  ws.getCell(band+1,1).value=r.service?r.service+' A':'—'; ws.getCell(band+1,1).font={bold:true,size:20,color:{argb:XC.ink}}; ws.getRow(band+1).height=30;
-  ws.getCell(band,3).value=Math.round(r.total)+' VA ÷ 240 V = '+r.amps+' A'; ws.getCell(band,3).font={size:11,color:{argb:XC.ink}};
-  if(r.conductors){ ws.getCell(band+1,3).value='Typical conductors: '+r.conductors[0]+' Cu / '+r.conductors[1]+' Al (83%, 310.12)'; ws.getCell(band+1,3).font={size:10,color:{argb:XC.ink}}; }
-  row=band+3;
-  kv('Calculated load (VA)',Math.round(r.total),'#,##0'); kv('Current at 240 V (A)',r.amps,'0');
-  if(S.sqft) kv('Min. GP circuits (120.13)',cc.c15+' × 15 A or '+cc.c20+' × 20 A');
+  headerRow(ws,row,['Result','Optional method','Unit','Standard method','Unit'],[1,3]); row++;
+  const line=(label,a,ua,b,ub,fmt,bold)=>{ const vals=[label,a,ua,b,ub]; vals.forEach((v,i)=>{ const c=ws.getCell(row,i+1); c.value=blankIf(v); c.border=boxed;
+      if((i===1||i===3)&&fmt&&typeof v==='number') c.numFmt=fmt; c.alignment={horizontal:i===1||i===3?'right':'left'};
+      c.font={bold:!!bold&&(i===1||i===3||i===0),size:bold&&(i===1||i===3)?13:11,color:{argb:i===2||i===4?XC.muted:XC.ink}};
+      if(bold) c.fill={type:'pattern',pattern:'solid',fgColor:{argb:XC.tint}}; }); row++; };
+  const oc=splitSize(ro.conductors&&ro.conductors[0]), sc=splitSize(rs.conductors&&rs.conductors[0]), oa=splitSize(ro.conductors&&ro.conductors[1]), sa=splitSize(rs.conductors&&rs.conductors[1]);
+  line('Minimum service',ro.service,'A',rs.service,'A','0',true);
+  line('Calculated load',Math.round(ro.total),'VA',Math.round(rs.total),'VA','#,##0');
+  line('Calculated current at 240 V',ro.amps,'A',rs.amps,'A','0');
+  line('Typical copper conductor (83%, 310.12)',oc[0],oc[1],sc[0],sc[1]);
+  line('Typical aluminum conductor (83%, 310.12)',oa[0],oa[1],sa[0],sa[1]);
   row++;
-  const hdr=['NEC ref.','Load','Detail','VA','In total?'];
-  hdr.forEach((h,i)=>{ const c=ws.getCell(row,i+1); c.value=h; c.font={bold:true}; c.fill={type:'pattern',pattern:'solid',fgColor:{argb:XC.tint}}; c.border=boxed; c.alignment={vertical:'middle',horizontal:i===3?'right':'left'}; });
+  headerRow(ws,row,['Other results','Value','Unit'],[1]); row++;
+  const one=(label,v,u,fmt)=>{ [label,v,u].forEach((x,i)=>{ const c=ws.getCell(row,i+1); c.value=blankIf(x); c.border=boxed; if(i===1&&fmt&&typeof x==='number') c.numFmt=fmt; c.alignment={horizontal:i===1?'right':'left'}; if(i===2) c.font={color:{argb:XC.muted}}; }); row++; };
+  const smaller=ro.service&&rs.service?Math.min(ro.service,rs.service):(ro.service||rs.service);
+  one('Smaller of the two minimum services',smaller,'A','0');
+  one('Minimum 15 A general-purpose circuits (120.13)',S.sqft?cc.c15:'','circuits','0');
+  one('Minimum 20 A general-purpose circuits (120.13)',S.sqft?cc.c20:'','circuits','0');
+  one('Living area',numOrBlank(S.sqft),'ft²','#,##0');
   row++;
-  r.lines.forEach(l=>{ const vals=[l.ref,l.label,l.detail,Math.round(l.va),l.sub?'Component':'Yes'];
-    vals.forEach((v,i)=>{ const c=ws.getCell(row,i+1); c.value=v; c.border=boxed; c.alignment={vertical:'top',wrapText:i===2||i===1}; if(i===3){c.numFmt='#,##0'; c.alignment={vertical:'top',horizontal:'right'};}
-      c.font={color:{argb:l.sub?XC.muted:XC.ink},size:l.sub?10:11}; if(l.sub) c.fill={type:'pattern',pattern:'solid',fgColor:{argb:XC.gray}}; });
-    row++; });
-  ['','Calculated load','',Math.round(r.total),''].forEach((v,i)=>{ const c=ws.getCell(row,i+1); c.value=v; c.font={bold:true}; c.border=boxed; if(i===3){c.numFmt='#,##0'; c.alignment={horizontal:'right'};} });
-  row+=2;
-  const notes=[]; r.warn.forEach(w=>notes.push(w));
-  notes.push('Rows marked Component are totaled into the demand line below them and are not added again.');
+  const notes=[...new Set([...ro.warn,...rs.warn])];
+  notes.push('Either method may be used for a one-family dwelling; the full worksheets are on the Optional 120.82 and Standard Part III tabs.');
+  notes.push('To change this job, edit the Inputs tab and upload this file to the calculator.');
   notes.push('Calculated per the 2026 NEC as adopted in Colorado (effective Aug 1, 2026). Verify against the adopted code and local amendments.');
-  notes.forEach(n=>{ ws.mergeCells(row,1,row,5); const c=ws.getCell(row,1); c.value='• '+n; c.font={size:9,color:{argb:XC.muted}}; c.alignment={wrapText:true,vertical:'top'}; ws.getRow(row).height=Math.max(15,Math.ceil(n.length/120)*13); row++; });
+  notes.forEach(n=>{ ws.mergeCells(row,1,row,5); const c=ws.getCell(row,1); c.value='• '+n; c.font={size:9,color:{argb:XC.muted}}; c.alignment={wrapText:true,vertical:'top'}; ws.getRow(row).height=Math.max(15,Math.ceil(n.length/95)*13); row++; });
   return ws;
 }
 async function makeXLSX(btn){
@@ -654,10 +716,10 @@ async function makeXLSX(btn){
   try{
     const EJ=await loadExcelJS(); const logo=await logoData('logo-electrical.png');
     const wb=new EJ.Workbook(); wb.creator='Vision Electrical Services'; wb.created=new Date();
-    const m=S.method, o=m==='optional'?'standard':'optional';
-    resultsWS(wb,m,logo); resultsWS(wb,o,logo); inputsWS(wb,logo);
+    inputsWS(wb,logo); resultsWS(wb,'optional',logo); resultsWS(wb,'standard',logo); summaryWS(wb,logo);
+    wb.views=[{x:0,y:0,width:20000,height:12000,firstSheet:0,activeTab:3,visibility:'visible'}];
     const buf=await wb.xlsx.writeBuffer();
-    const name=fileBase(m)+'.xlsx';
+    const name=fileBase(S.method)+'.xlsx';
     const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
     const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href); a.remove();},4000);
     st.textContent='Excel file downloaded: '+name;
