@@ -56,7 +56,12 @@ section.card{background:var(--surface);border:1px solid var(--line);border-radiu
 .card h2 .ref{font-size:13px;font-weight:400;color:var(--muted)}
 .hint{color:var(--muted);font-size:14px;margin:0 0 12px;max-width:70ch}
 .fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px 12px}
-label.f{display:flex;flex-direction:column;justify-content:flex-end;gap:6px;font-size:14px;font-weight:600;color:var(--ink);min-width:0}
+div.f>label{font-size:14px;font-weight:600;color:var(--ink)}
+.datewrap{display:grid;grid-template-columns:minmax(0,1fr) 44px;gap:8px;align-items:center;min-width:0}
+input[type=date]{-webkit-appearance:none;appearance:none;display:block;min-width:0;max-width:100%;min-height:44px;line-height:1.2;text-align:left}
+input[type=date]::-webkit-date-and-time-value{text-align:left;margin:0}
+input[type=date]::-webkit-calendar-picker-indicator{margin:0}
+label.f,div.f{display:flex;flex-direction:column;justify-content:flex-end;gap:6px;font-size:14px;font-weight:600;color:var(--ink);min-width:0}
 input,select{font:inherit;font-size:16px;font-weight:400;color:var(--ink);background:var(--surface);border:1px solid var(--field);border-radius:4px;padding:10px 12px;width:100%;min-width:0}
 select{-webkit-appearance:none;appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 18px) 50%,calc(100% - 13px) 50%;background-size:5px 5px;background-repeat:no-repeat;padding-right:32px}
 
@@ -454,7 +459,9 @@ function renderList(key){
   box.innerHTML=h;
 }
 function renderJob(){
-  $('jobfields').innerHTML=JOB_FIELDS.map(([k,l])=>`<label class="f"${k==='notes'||k==='address'?' style="grid-column:1/-1"':''}>${l}<input id="job-${k}" data-job="${k}" type="${k==='date'?'date':'text'}" value="${esc(S.job[k])}"></label>`).join('');
+  $('jobfields').innerHTML=JOB_FIELDS.map(([k,l])=>k==='date'
+    ?`<div class="f"><label for="job-date">${l}</label><div class="datewrap"><input id="job-date" data-job="date" type="date" value="${esc(S.job.date)}"><button class="x" type="button" data-cleardate aria-label="Clear date" title="Clear date">×</button></div></div>`
+    :`<label class="f"${k==='notes'||k==='address'?' style="grid-column:1/-1"':''}>${l}<input id="job-${k}" data-job="${k}" type="text" value="${esc(S.job[k])}"></label>`).join('');
   const any=JOB_FIELDS.some(f=>String(S.job[f[0]]||'').trim());
   if(any) $('jobbox').open=true;
 }
@@ -521,6 +528,7 @@ document.addEventListener('input',e=>{
 document.addEventListener('change',e=>{ if(e.target.dataset.hv==='heatType'||e.target.type==='checkbox'){ /* handled on input */ } });
 document.addEventListener('click',e=>{
   const b=e.target.closest('button,summary'); if(!b) return;
+  if(b.hasAttribute('data-cleardate')){ const d=$('job-date'); d.value=''; S.job.date=''; touched(); renderResult(); return; }
   if(b.dataset.m){S.method=b.dataset.m; save(); renderMethodText(); renderResult(); return;}
   if(b.dataset.switch){S.method=b.dataset.switch; save(); renderMethodText(); renderResult(); window.scrollTo({top:0,behavior:'smooth'}); return;}
   if(b.dataset.addl){S[b.dataset.addl].push({...LISTS[b.dataset.addl].blank}); touched(); renderList(b.dataset.addl); renderResult(); const ins=$('list-'+b.dataset.addl).querySelectorAll('input[type=text]'); ins[ins.length-1]?.focus(); return;}
