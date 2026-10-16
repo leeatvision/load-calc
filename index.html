@@ -55,23 +55,29 @@ section.card{background:var(--surface);border:1px solid var(--line);border-radiu
 .card h2 .ref{font-size:13px;font-weight:400;color:var(--muted)}
 .hint{color:var(--muted);font-size:14px;margin:0 0 12px;max-width:70ch}
 .fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px 12px}
-label.f{display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:600;color:var(--ink);min-width:0}
+label.f{display:flex;flex-direction:column;justify-content:flex-end;gap:6px;font-size:14px;font-weight:600;color:var(--ink);min-width:0}
 input,select{font:inherit;font-size:16px;font-weight:400;color:var(--ink);background:var(--surface);border:1px solid var(--field);border-radius:4px;padding:10px 12px;width:100%;min-width:0}
 select{-webkit-appearance:none;appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 18px) 50%,calc(100% - 13px) 50%;background-size:5px 5px;background-repeat:no-repeat;padding-right:32px}
 
 input[type=checkbox]{width:22px;height:22px;flex:none;accent-color:var(--accent)}
 .rows{display:flex;flex-direction:column;gap:8px}
-.row{display:grid;grid-template-columns:minmax(0,1fr) 120px auto auto;gap:8px;align-items:center}
-.row.nomotor{grid-template-columns:minmax(0,1fr) 120px auto}
-.row.ev{grid-template-columns:minmax(0,1fr) 110px 110px auto}
+.row{display:grid;grid-template-columns:minmax(0,1fr) 120px 48px 44px;gap:8px;align-items:center}
+.row.nomotor{grid-template-columns:minmax(0,1fr) 120px 44px}
+.row.ev{grid-template-columns:minmax(0,1fr) 110px 110px 44px}
 .rowhead{font-size:13px;font-weight:600;color:var(--muted)}
-.chk{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--ink);white-space:nowrap}
+.chk{display:flex;align-items:flex-start;gap:10px;font-size:14px;color:var(--ink);min-width:0}
+.chk input{margin-top:1px}
+.row .chk{justify-content:center;align-items:center}
+.row .chk input{margin:0}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .x{appearance:none;border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:4px;width:44px;height:44px;cursor:pointer;font-size:18px;line-height:1}
 .x:hover{color:var(--ink);border-color:var(--muted)}
 .add{appearance:none;align-self:flex-start;min-height:44px;border:1px solid var(--line);background:none;color:var(--accent-text);border-radius:4px;padding:8px 14px;font:inherit;font-weight:600;font-size:14px;cursor:pointer}
 .add:hover{border-color:var(--accent)}
 @media (max-width:520px){.wrap{padding-block:12px 96px}h1{font-size:24px}.code{font-size:12px}section.card{padding:14px 12px}.tab{flex:1 1 0;padding:10px 6px 8px;font-size:15px}.tab small{display:block;margin:2px 0 0}.btn{min-height:44px}.plate{padding:14px}.plate .svc{font-size:46px}.ws td:first-child{padding-left:12px}.ws td{padding-right:12px}.actions,.compare,.meta{padding-left:12px;padding-right:12px}.compare{margin-left:0;margin-right:0}.status{padding-left:12px;padding-right:12px}
-.row,.row.nomotor,.row.ev{grid-template-columns:minmax(0,1fr) 96px auto}.row .chk{grid-column:1/-1;order:5}.row.ev .sp{grid-column:1/2}}
+.fields{grid-template-columns:minmax(0,1fr)}label.f{justify-content:flex-start}
+.row{grid-template-columns:minmax(0,1fr) 84px 44px 44px}.row.nomotor{grid-template-columns:minmax(0,1fr) 96px 44px}.row.ev{grid-template-columns:minmax(0,1fr) 84px 84px 44px}.row input{padding-left:10px;padding-right:8px}
+.actions .btn{flex:1 1 0;min-width:0;padding:8px 4px;font-size:14px;line-height:1.2;white-space:normal}}
 details.job summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
 details.job summary::-webkit-details-marker{display:none}
 details.job summary .tog{font-size:13px;color:var(--accent-text);font-weight:600}
@@ -101,15 +107,15 @@ details.job[open] summary{margin-bottom:10px}
 .warnbox p{margin:0} .warnbox p+p{margin-top:6px}
 .compare{margin:12px 18px;display:flex;justify-content:space-between;gap:10px;align-items:center;font-size:13px;color:var(--muted);flex-wrap:wrap}
 .compare button{appearance:none;min-height:40px;border:1px solid var(--line);background:var(--sunk);color:var(--ink);border-radius:4px;padding:6px 10px;font:inherit;font-size:13px;cursor:pointer}
-.actions{display:flex;flex-wrap:nowrap;gap:8px;padding:14px 18px 10px}
-.actions .btn{flex:1 1 auto;min-width:0;white-space:nowrap;padding:9px 8px;font-size:14px;text-align:center}
+.actions{display:flex;flex-wrap:nowrap;gap:8px;margin:0 0 16px}
+.actions .btn{flex:0 0 auto;white-space:nowrap;padding:10px 18px;font-size:15px;text-align:center}
 .status:empty{display:none}
 .btn{appearance:none;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);border-radius:4px;padding:9px 14px;font:inherit;font-weight:600;cursor:pointer;transition:background-color 150ms cubic-bezier(0.4,0,0.2,1)}
 .btn:not(.ghost):not(:disabled):hover{background:var(--accent-hover);border-color:var(--accent-hover)}
 .btn.ghost:hover{border-color:var(--muted)}
 .btn.ghost{background:none;color:var(--ink);border-color:var(--line)}
 .btn:disabled{opacity:.5;cursor:default}
-.status{padding:0 18px 12px;font-size:13px;color:var(--muted);min-height:1em}
+.status{margin:-8px 0 14px;font-size:14px;color:var(--muted)}
 .foot{margin-top:22px;color:var(--muted);font-size:12.5px;max-width:75ch}
 .mbar{display:none}
 @media (max-width:900px){.mbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:5;justify-content:space-between;align-items:center;gap:12px;background:var(--accent);color:var(--accent-ink);padding:10px max(16px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));font-weight:600;font-size:15px}
@@ -125,6 +131,13 @@ details.job[open] summary{margin-bottom:10px}
     </div>
     <div class="code">NEC 2026 · Art. 120 · 120/240 V, 1Φ, 3-wire</div>
   </header>
+
+  <div class="actions">
+    <button class="btn" type="button" id="pdfBtn">Download PDF</button>
+    <button class="btn ghost" type="button" id="exBtn">Load NEC example</button>
+    <button class="btn ghost" type="button" id="clrBtn">Clear all</button>
+  </div>
+  <div class="status" id="status" role="status"></div>
 
   <nav class="tabs" role="tablist" aria-label="Calculation method">
     <button class="tab" role="tab" id="tab-optional" aria-selected="true" data-m="optional">Optional method<small>120.82</small></button>
@@ -409,11 +422,11 @@ function renderList(key){
   const cfg=LISTS[key], box=$('list-'+key), arr=S[key];
   let h='';
   if(arr.length){
-    h+=`<div class="row ${cfg.motor?'':cfg.ev?'ev':'nomotor'} rowhead">`+cfg.cols.map(c=>`<span>${c[2]}</span>`).join('')+(cfg.motor?'<span></span>':'')+'<span></span></div>';
+    h+=`<div class="row ${cfg.motor?'':cfg.ev?'ev':'nomotor'} rowhead">`+cfg.cols.map(c=>`<span>${c[2]}</span>`).join('')+(cfg.motor?'<span style="text-align:center">Motor</span>':'')+'<span></span></div>';
   }
   arr.forEach((r,i)=>{
     h+=`<div class="row ${cfg.motor?'':cfg.ev?'ev':'nomotor'}">`+cfg.cols.map((c,ci)=>`<input class="${ci===2?'sp':''}" id="${key}-${i}-${c[0]}" aria-label="${c[2]} ${i+1}" type="${c[1]}" ${c[1]==='number'?'min="0" step="any" inputmode="decimal"':''} data-l="${key}" data-i="${i}" data-k="${c[0]}" value="${esc(r[c[0]])}" ${c[0]==='setpoint'?'placeholder="—"':''}>`).join('')
-      +(cfg.motor?`<label class="chk"><input type="checkbox" id="${key}-${i}-motor" data-l="${key}" data-i="${i}" data-k="motor" ${r.motor?'checked':''}> Motor</label>`:'')
+      +(cfg.motor?`<label class="chk"><input type="checkbox" id="${key}-${i}-motor" data-l="${key}" data-i="${i}" data-k="motor" ${r.motor?'checked':''}><span class="sr">Motor</span></label>`:'')
       +`<button class="x" type="button" aria-label="Remove row ${i+1}" data-rm="${key}" data-i="${i}">×</button></div>`;
   });
   h+=`<button class="add" type="button" data-addl="${key}">+ ${cfg.add}</button>`;
@@ -453,18 +466,13 @@ function renderAll(){
   Object.keys(LISTS).forEach(renderList); renderHVAC(); renderMethodText(); renderResult();
 }
 function renderResult(){
+  const stEl=$('status'); if(isExample) stEl.textContent='Example house shown. Clear all to start a new job.'; else if(stEl.textContent==='Example house shown. Clear all to start a new job.') stEl.textContent='';
   const m=S.method, r=LC[m](S), other=LC[m==='optional'?'standard':'optional'](S);
   const cc=LC.circuits(S.sqft);
   const cond=r.conductors?`${r.conductors[0]} Cu / ${r.conductors[1]} Al`:'—';
   let rows=r.lines.map(l=>`<tr class="${l.sub?'sub':''}"><td><span class="rf">${esc(l.ref)}</span>${esc(l.label)}<span class="dt">${esc(l.detail)}</span></td><td class="va">${fmt(l.va)}</td></tr>`).join('');
   rows+=`<tr class="tot"><td style="padding-left:18px">Calculated load</td><td class="va">${fmt(r.total)} VA</td></tr>`;
   $('result').innerHTML=`
-    <div class="actions">
-      <button class="btn" type="button" id="pdfBtn">Download PDF</button>
-      <button class="btn ghost" type="button" id="exBtn">Load NEC example</button>
-      <button class="btn ghost" type="button" id="clrBtn">Clear all</button>
-    </div>
-    <div class="status" id="status">${isExample?'Example house shown. Clear all to start a new job.':''}</div>
     <div class="plate">
       <div><div class="lbl">${m==='optional'?'Optional method · 120.82':'Standard method · Part III'}${isExample?' · example':''}</div><div class="svc">${r.service||'—'}<span>A</span></div><div class="lbl">Minimum service</div></div>
       <div class="calc">${fmt(r.total)} VA<br>÷ 240 V<br><b>${r.amps} A</b></div>
@@ -496,8 +504,8 @@ document.addEventListener('click',e=>{
   if(b.dataset.switch){S.method=b.dataset.switch; save(); renderMethodText(); renderResult(); window.scrollTo({top:0,behavior:'smooth'}); return;}
   if(b.dataset.addl){S[b.dataset.addl].push({...LISTS[b.dataset.addl].blank}); touched(); renderList(b.dataset.addl); renderResult(); const ins=$('list-'+b.dataset.addl).querySelectorAll('input[type=text]'); ins[ins.length-1]?.focus(); return;}
   if(b.dataset.rm){S[b.dataset.rm].splice(+b.dataset.i,1); touched(); renderList(b.dataset.rm); renderResult(); return;}
-  if(b.id==='exBtn'){if(b.dataset.armed){const m=S.method; const job=S.job; S=example(); S.method=m; S.job=job; isExample=true; save(); renderAll();} else {b.dataset.armed='1'; b.textContent='Tap to confirm'; setTimeout(()=>{if(b.isConnected){delete b.dataset.armed; b.textContent='Load NEC example';}},3000);} return;}
-  if(b.id==='clrBtn'){if(b.dataset.armed){S=blank(); isExample=false; save(); renderAll(); $('status').textContent='Cleared. Enter the new job.';} else {b.dataset.armed='1'; b.textContent='Tap to confirm'; setTimeout(()=>{if(b.isConnected){delete b.dataset.armed; b.textContent='Clear all';}},3000);} return;}
+  if(b.id==='exBtn'){if(b.dataset.armed){delete b.dataset.armed; b.textContent='Load NEC example'; const m=S.method; const job=S.job; S=example(); S.method=m; S.job=job; isExample=true; save(); renderAll();} else {b.dataset.armed='1'; b.textContent='Tap to confirm'; setTimeout(()=>{if(b.isConnected){delete b.dataset.armed; b.textContent='Load NEC example';}},3000);} return;}
+  if(b.id==='clrBtn'){if(b.dataset.armed){delete b.dataset.armed; b.textContent='Clear all'; S=blank(); isExample=false; save(); renderAll(); $('status').textContent='Cleared. Enter the new job.';} else {b.dataset.armed='1'; b.textContent='Tap to confirm'; setTimeout(()=>{if(b.isConnected){delete b.dataset.armed; b.textContent='Clear all';}},3000);} return;}
   if(b.id==='pdfBtn'){makePDF(b); return;}
 });
 $('jobbox').addEventListener('toggle',()=>{$('jobbox').querySelector('.tog').textContent=$('jobbox').open?'Hide':'Show';});
