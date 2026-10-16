@@ -61,6 +61,9 @@ input,select{font:inherit;font-size:16px;font-weight:400;color:var(--ink);backgr
 select{-webkit-appearance:none;appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 18px) 50%,calc(100% - 13px) 50%;background-size:5px 5px;background-repeat:no-repeat;padding-right:32px}
 
 input[type=checkbox]{width:22px;height:22px;flex:none;accent-color:var(--accent)}
+.fields.stack{grid-template-columns:minmax(0,1fr);gap:10px}
+.fields.stack label.f{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,260px);align-items:center;gap:12px}
+.fields.stack .chk{grid-column:1/-1}
 .rows{display:flex;flex-direction:column;gap:8px}
 .row{display:grid;grid-template-columns:minmax(0,1fr) 120px 48px 44px;gap:8px;align-items:center}
 .row.nomotor{grid-template-columns:minmax(0,1fr) 120px 44px}
@@ -76,7 +79,7 @@ input[type=checkbox]{width:22px;height:22px;flex:none;accent-color:var(--accent)
 .add{appearance:none;align-self:flex-start;min-height:44px;border:1px solid var(--line);background:none;color:var(--accent-text);border-radius:4px;padding:8px 14px;font:inherit;font-weight:600;font-size:14px;cursor:pointer}
 .add:hover{border-color:var(--accent)}
 @media (max-width:520px){.wrap{padding-block:12px 96px}h1{font-size:24px}.code{font-size:12px}section.card{padding:14px 12px}.tab{flex:1 1 0;padding:10px 6px 8px;font-size:15px}.tab small{display:block;margin:2px 0 0}.btn{min-height:44px}.plate{padding:14px}.plate .svc{font-size:46px}.ws td:first-child{padding-left:12px}.ws td{padding-right:12px}.actions,.compare,.meta{padding-left:12px;padding-right:12px}.compare{margin-left:0;margin-right:0}.status{padding-left:12px;padding-right:12px}
-.fields{grid-template-columns:minmax(0,1fr)}label.f{justify-content:flex-start}
+.fields{grid-template-columns:minmax(0,1fr)}label.f{justify-content:flex-start}.fields.stack label.f{display:flex;flex-direction:column;align-items:stretch;gap:6px}
 .row{grid-template-columns:minmax(0,1fr) 84px 44px 44px}.row.nomotor{grid-template-columns:minmax(0,1fr) 96px 44px}.row.ev{grid-template-columns:minmax(0,1fr) 84px 84px 44px}.row input{padding-left:10px;padding-right:8px}}
 details.job summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
 details.job summary::-webkit-details-marker{display:none}
@@ -194,9 +197,9 @@ details.job[open] summary{margin-bottom:10px}
       </section>
 
       <section class="card">
-        <h2>Heating &amp; cooling <span class="ref" id="hvacRef"></span></h2>
+        <h2>Heating and cooling <span class="ref" id="hvacRef"></span></h2>
         <p class="hint" id="hvacHint"></p>
-        <div class="fields" id="hvacfields"></div>
+        <div class="fields stack" id="hvacfields"></div>
       </section>
 
       <section class="card">
@@ -293,7 +296,7 @@ const LC = (() => {
     // 1. General lighting group
     const gl = sqft * 2, sav = sa * 1500, lav = ld * 1500, grp = gl + sav + lav;
     const glDem = Math.min(grp, 3000) + Math.max(0, Math.min(grp, 120000) - 3000) * 0.35 + Math.max(0, grp - 120000) * 0.25;
-    lines.push({ ref: '120.41', label: 'General lighting & receptacles', detail: `${fmt(sqft)} ft² × 2 VA`, va: gl, sub: true });
+    lines.push({ ref: '120.41', label: 'General lighting and receptacles', detail: `${fmt(sqft)} ft² × 2 VA`, va: gl, sub: true });
     lines.push({ ref: '120.52(A)', label: 'Small-appliance circuits', detail: `${sa} × 1,500 VA`, va: sav, sub: true });
     lines.push({ ref: '120.52(B)', label: 'Laundry circuit', detail: `${ld} × 1,500 VA`, va: lav, sub: true });
     lines.push({ ref: 'Table 120.42', label: 'General lighting demand', detail: `${fmt(grp)} VA: first 3,000 at 100%, next at 35%`, va: glDem });
@@ -349,21 +352,21 @@ const LC = (() => {
     const lines = [], warn = [];
     const sqft = num(s.sqft), sa = Math.max(2, parseInt(s.sa) || 0), ld = Math.max(0, parseInt(s.laundry) || 0);
     const gl = sqft * 2, sav = (sa + ld) * 1500;
-    lines.push({ ref: '120.82(B)(1)', label: 'General lighting & receptacles', detail: `${fmt(sqft)} ft² × 2 VA`, va: gl, sub: true });
-    lines.push({ ref: '120.82(B)(2)', label: 'Small-appliance & laundry circuits', detail: `${sa + ld} × 1,500 VA`, va: sav, sub: true });
+    lines.push({ ref: '120.82(B)(1)', label: 'General lighting and receptacles', detail: `${fmt(sqft)} ft² × 2 VA`, va: gl, sub: true });
+    lines.push({ ref: '120.82(B)(2)', label: 'Small-appliance and laundry circuits', detail: `${sa + ld} × 1,500 VA`, va: sav, sub: true });
     const ckSum = (s.cooking || []).reduce((t, c) => t + num(c.kw) * 1000, 0);
     if (ckSum) lines.push({ ref: '120.82(B)(3)', label: 'Cooking equipment (nameplate)', detail: (s.cooking || []).filter(c => num(c.kw)).map(c => `${c.name || 'Cooking'} ${num(c.kw)} kW`).join(', '), va: ckSum, sub: true });
     const drSum = (s.dryers || []).reduce((t, d) => t + num(d.va), 0);
     if (drSum) lines.push({ ref: '120.82(B)(3)', label: 'Clothes dryer (nameplate)', detail: (s.dryers || []).filter(d => num(d.va)).map(d => `${fmt(num(d.va))} VA`).join(', '), va: drSum, sub: true });
     const apps = (s.appliances || []).filter(x => num(x.va));
     const appSum = apps.reduce((t, x) => t + num(x.va), 0);
-    if (appSum) lines.push({ ref: '120.82(B)(3)–(4)', label: 'Fastened-in-place appliances & motors', detail: `${apps.length} item(s) at nameplate`, va: appSum, sub: true });
+    if (appSum) lines.push({ ref: '120.82(B)(3)–(4)', label: 'Fastened-in-place appliances and motors', detail: `${apps.length} item(s) at nameplate`, va: appSum, sub: true });
     const oth = (s.other || []).filter(x => num(x.va)); const othSum = oth.reduce((t, x) => t + num(x.va), 0);
     if (othSum) lines.push({ ref: '120.82(B)(3)', label: 'Other loads (nameplate)', detail: oth.map(x => x.name || 'Other').join(', '), va: othSum, sub: true });
     const G = gl + sav + ckSum + drSum + appSum + othSum;
     const gDem = Math.min(G, 8000) + Math.max(0, G - 8000) * 0.4;
     lines.push({ ref: '120.82(B)', label: 'General load demand', detail: `${fmt(G)} VA: first 8,000 at 100%, remainder at 40%`, va: gDem });
-    // (C) heating & cooling — largest of
+    // (C) heating and cooling — largest of
     const h = hvacParts(s.hvac || {});
     const opts = [];
     if (h.cool) opts.push({ d: `A/C or heat pump cooling at 100%: ${fmt(h.cool)} VA`, va: h.cool });
@@ -662,88 +665,122 @@ async function makeXLSX(btn){
   finally{ btn.disabled=false; }
 }
 const HEAT=[['none','None'],['heatpump','Heat pump'],['furnace','Central electric furnace / strips'],['space','Separately controlled space heaters'],['storage','Electric thermal storage']];
-const SEC={job:'JOB INFORMATION',dw:'DWELLING',hv:'HEATING & COOLING',cooking:'COOKING',dryers:'CLOTHES DRYERS',appliances:'FASTENED-IN-PLACE APPLIANCES',evse:'EV CHARGERS',other:'OTHER LOADS'};
+const SEC={job:'JOB INFORMATION',dw:'DWELLING',hv:'HEATING AND COOLING',cooking:'COOKING',dryers:'CLOTHES DRYERS',appliances:'FASTENED-IN-PLACE APPLIANCES',evse:'EV CHARGERS',other:'OTHER LOADS'};
 const DW=[['sqft','Living area (ft²)'],['sa','Small-appliance circuits (min 2)'],['laundry','Laundry circuits'],['method','Method shown (Optional or Standard)'],['cookCombine','Treat cooktop + ovens as one range (Yes/No)']];
 const HV=[['cool','Cooling (A/C or heat pump) VA'],['heatType','Electric heat type'],['hpComp','Heat pump compressor VA'],['hpSupp','Supplemental heat VA'],['heat','Heating nameplate VA (furnace, space heaters, storage)'],['units','Number of space heaters'],['blower','Air handler / blower VA'],['interlock','Compressor and supplemental heat interlocked (Yes/No)']];
 const TBL={cooking:[['name','Appliance'],['kw','kW']],dryers:[['name','Dryer'],['va','VA']],appliances:[['name','Appliance'],['va','VA'],['motor','Motor (Yes/No)']],evse:[['name','Charger'],['va','Nameplate VA'],['setpoint','Setpoint VA (load management, optional)']],other:[['name','Load'],['va','VA']]};
 const yn=v=>v===true||/^(y|yes|true|x|1)$/i.test(String(v).trim());
 const numOrBlank=v=>{ if(v===''||v==null) return ''; const n=parseFloat(String(v).replace(/[,\s]/g,'').replace(/(va|kw|ft²|ft2|a)$/i,'')); return isFinite(n)?n:''; };
 const norm=s=>String(s).toLowerCase().replace(/[^a-z0-9]/g,'');
-const IN_SEC=[['job','Job'],['dw','Dwelling'],['hv','Heating & cooling'],['cooking','Cooking'],['dryers','Dryer'],['appliances','Appliance'],['evse','EV charger'],['other','Other load']];
-const IN_HDR=['Section','Item','Value','Unit','Motor (Yes/No)','Setpoint VA','Notes'];
-const UNITS={sqft:'ft²',sa:'circuits',laundry:'circuits',cool:'VA',hpComp:'VA',hpSupp:'VA',heat:'VA',units:'count',blower:'VA'};
+const IN_HDR=['ID','Section','Item','Value','Unit','Motor (Yes/No)','Setpoint','Notes'];
+const U_POWER=['VA','W','kVA','kW','A'], U_KW=['kW','kVA','VA','W','A'], U_AREA=['ft²','m²'];
+// Fixed fields, keyed by the hidden ID column: [state group, key, kind]
+const FIX={
+  'job.company':['job','company','text'],'job.customer':['job','customer','text'],'job.address':['job','address','text'],'job.city':['job','city','text'],'job.permit':['job','permit','text'],'job.preparedBy':['job','preparedBy','text'],'job.license':['job','license','text'],'job.date':['job','date','date'],'job.notes':['job','notes','text'],
+  'dw.sqft':[null,'sqft','area'],'dw.sa':[null,'sa','int'],'dw.laundry':[null,'laundry','int'],'dw.method':[null,'method','method'],'dw.cookCombine':[null,'cookCombine','yesno'],
+  'hv.cool':['hvac','cool','power'],'hv.heatType':['hvac','heatType','heat'],'hv.hpComp':['hvac','hpComp','power'],'hv.hpSupp':['hvac','hpSupp','power'],'hv.heat':['hvac','heat','power'],'hv.units':['hvac','units','int'],'hv.blower':['hvac','blower','power'],'hv.interlock':['hvac','interlock','yesno']};
+const LIST_ID={cooking:'cooking',dryer:'dryers',appliance:'appliances',ev:'evse',other:'other'};
+// Convert a value written in `unit` to the calculator's unit for that kind of field.
+function convert(val,unit,kind,warn,where){
+  const n=numOrBlank(val); if(n===''||n==null) return '';
+  const u=String(unit??'').toLowerCase().replace(/[\s.]/g,'').replace(/²/g,'2').replace(/\^2/g,'2');
+  if(kind==='area'){
+    if(!u||/^(ft2|ft|sqft|sf|squarefeet|squarefoot|feet2)$/.test(u)) return n;
+    if(/^(m2|sqm|squaremeters?|squaremetres?|m)$/.test(u)) return Math.round(n*10.7639);
+    warn.push(where+': unit "'+unit+'" not recognized, read as ft²'); return n;
+  }
+  if(kind==='power'||kind==='kw'){
+    let va;
+    if(!u) va=kind==='kw'?n*1000:n;
+    else if(/^(va|w|watts?|voltamps?)$/.test(u)) va=n;
+    else if(/^(kva|kw|kilowatts?)$/.test(u)) va=n*1000;
+    else if(/^(a|amps?|amperes?)$/.test(u)) va=n*240;
+    else { warn.push(where+': unit "'+unit+'" not recognized, read as '+(kind==='kw'?'kW':'VA')); va=kind==='kw'?n*1000:n; }
+    return kind==='kw'?Math.round(va)/1000:Math.round(va);
+  }
+  return n;
+}
 function inputsWS(wb,logo){
   const ws=wb.addWorksheet('Inputs',{views:[{state:'frozen',ySplit:6,showGridLines:false}]});
-  ws.columns=[{width:18},{width:44},{width:18},{width:10},{width:15},{width:14},{width:52}];
-  addLogo(wb,ws,logo,4.35);
-  ws.getRow(1).height=22; ws.getRow(2).height=18; ws.getRow(3).height=18; ws.getRow(4).height=18;
-  ws.getCell('A1').value='Load calc inputs'; ws.getCell('A1').font={bold:true,size:16};
-  ws.getCell('A2').value='Edit the green Value column (C). Add a load by inserting a row and filling in Section, Item and Value; delete a row to remove a load.'; ws.getCell('A2').font={size:10,color:{argb:XC.muted}};
-  ws.getCell('A3').value='Keep the Section names and the Job, Dwelling and Heating & cooling item names as they are. Then upload this file to the calculator.'; ws.getCell('A3').font={size:10,color:{argb:XC.muted}};
+  ws.columns=[{width:16,hidden:true},{width:18},{width:42},{width:16},{width:10},{width:15},{width:12},{width:46}];
+  addLogo(wb,ws,logo,5.6);
+  [22,18,18,18].forEach((h,i)=>ws.getRow(i+1).height=h);
+  ws.getCell('B1').value='Load calc inputs'; ws.getCell('B1').font={bold:true,size:16};
+  ws.getCell('B2').value='Change any Value, Item name or Unit. Units are converted on upload (A means amps at 240 V; use VA or W for 120 V loads).'; ws.getCell('B2').font={size:10,color:{argb:XC.muted}};
+  ws.getCell('B3').value='To add a load, copy an existing row of the same type and change it. To remove one, delete its row. Then upload this file to the calculator.'; ws.getCell('B3').font={size:10,color:{argb:XC.muted}};
   const H=6;
-  IN_HDR.forEach((h,i)=>{ const c=ws.getCell(H,i+1); c.value=h; c.font={bold:true,color:{argb:XC.ink}}; c.fill={type:'pattern',pattern:'solid',fgColor:{argb:XC.green}}; c.border=boxed; c.alignment={vertical:'middle',horizontal:i===2?'right':'left'}; });
-  ws.getRow(H).height=20; ws.autoFilter={from:{row:H,column:1},to:{row:H,column:7}};
+  IN_HDR.forEach((h,i)=>{ const cl=ws.getCell(H,i+1); cl.value=h; cl.font={bold:true,color:{argb:XC.ink}}; cl.fill={type:'pattern',pattern:'solid',fgColor:{argb:XC.green}}; cl.border=boxed; cl.alignment={vertical:'middle',horizontal:i===3||i===6?'right':'left'}; });
+  ws.getRow(H).height=20; ws.autoFilter={from:{row:H,column:2},to:{row:H,column:8}};
   let r=H+1, band=0;
-  const put=(sec,item,val,unit,opt={})=>{
-    const vals=[sec,item,val,unit,opt.motor??'',opt.setpoint??'',opt.note||''];
-    vals.forEach((v,i)=>{ const c=ws.getCell(r,i+1); c.value=(v===''||v==null)?null:v; c.border=boxed; c.alignment={vertical:'middle',horizontal:(i===2||i===5)&&typeof v==='number'?'right':'left'};
-      c.fill={type:'pattern',pattern:'solid',fgColor:{argb:i===2?XC.pale:(band%2?XC.gray:'FFFFFFFF')}};
-      if(i===0) c.font={color:{argb:XC.muted}}; if(i===2) c.font={bold:true}; if(i===6) c.font={size:9,color:{argb:XC.muted}}; });
-    const vc=ws.getCell(r,3);
-    if(opt.fmt) vc.numFmt=opt.fmt;
-    if(opt.list) vc.dataValidation={type:'list',allowBlank:true,formulae:['"'+opt.list.join(',')+'"']};
-    if(opt.motorList){ const mc=ws.getCell(r,5); mc.dataValidation={type:'list',allowBlank:true,formulae:['"Yes,No"']}; mc.alignment={horizontal:'center'}; }
-    if(opt.setpointFmt) ws.getCell(r,6).numFmt='#,##0';
+  const put=(id,sec,item,val,unit,opt={})=>{
+    const vals=[id,sec,item,val,unit,opt.motor??'',opt.setpoint??'',opt.note||''];
+    vals.forEach((v,i)=>{ const cl=ws.getCell(r,i+1); cl.value=(v===''||v==null)?null:v; cl.border=boxed;
+      cl.alignment={vertical:'middle',horizontal:(i===3||i===6)&&typeof v==='number'?'right':(i===4||i===5?'center':'left')};
+      cl.fill={type:'pattern',pattern:'solid',fgColor:{argb:(i===3||i===4||i===6)?XC.pale:(band%2?XC.gray:'FFFFFFFF')}};
+      if(i===0) cl.font={size:8,color:{argb:XC.muted}}; if(i===1) cl.font={color:{argb:XC.muted}}; if(i===3) cl.font={bold:true}; if(i===7) cl.font={size:9,color:{argb:XC.muted}}; });
+    if(opt.fmt){ ws.getCell(r,4).numFmt=opt.fmt; ws.getCell(r,7).numFmt=opt.fmt; }
+    if(opt.list) ws.getCell(r,4).dataValidation={type:'list',allowBlank:true,showErrorMessage:false,formulae:['"'+opt.list.join(',')+'"']};
+    if(opt.units) ws.getCell(r,5).dataValidation={type:'list',allowBlank:true,showErrorMessage:false,formulae:['"'+opt.units.join(',')+'"']};
+    if(opt.motorList) ws.getCell(r,6).dataValidation={type:'list',allowBlank:true,showErrorMessage:false,formulae:['"Yes,No"']};
     r++;
   };
-  const VA='#,##0', N=v=>numOrBlank(v);
-  band=0; JOB_FIELDS.forEach(([k,l])=>put('Job',l,k==='date'?fmtDate(S.job[k]||''):(S.job[k]||''),'',{fmt:'@'}));
-  band=1; put('Dwelling','Living area',N(S.sqft),'ft²',{fmt:VA,note:'Outside dimensions; no garage, open porch or unfinished space'});
-  put('Dwelling','Small-appliance circuits',N(S.sa),'circuits',{fmt:'0',note:'Minimum 2'});
-  put('Dwelling','Laundry circuits',N(S.laundry),'circuits',{fmt:'0'});
-  put('Dwelling','Method shown',S.method==='standard'?'Standard':'Optional','',{list:['Optional','Standard']});
-  put('Dwelling','Cooktop + ovens as one range (Note 4)',S.cookCombine?'Yes':'No','',{list:['Yes','No'],note:'Standard method only'});
-  band=2; const h=S.hvac;
-  put('Heating & cooling','Cooling (A/C or heat pump)',N(h.cool),'VA',{fmt:VA});
-  put('Heating & cooling','Electric heat type',(HEAT.find(x=>x[0]===h.heatType)||HEAT[0])[1],'',{list:HEAT.map(x=>x[1].replace(/,/g,''))});
-  put('Heating & cooling','Heat pump compressor',N(h.hpComp),'VA',{fmt:VA,note:'Heat pump only'});
-  put('Heating & cooling','Supplemental heat',N(h.hpSupp),'VA',{fmt:VA,note:'Heat pump only'});
-  put('Heating & cooling','Heating nameplate',N(h.heat),'VA',{fmt:VA,note:'Furnace, space heaters or thermal storage'});
-  put('Heating & cooling','Number of space heaters',N(h.units),'count',{fmt:'0',note:'Space heaters only'});
-  put('Heating & cooling','Air handler / blower',N(h.blower),'VA',{fmt:VA});
-  put('Heating & cooling','Compressor and supplemental interlocked',h.interlock?'Yes':'No','',{list:['Yes','No'],note:'Heat pump only'});
-  band=3; (S.cooking||[]).forEach(c=>put('Cooking',c.name||'',N(c.kw),'kW',{fmt:'0.0#'}));
-  band=4; (S.dryers||[]).forEach(d=>put('Dryer',d.name||'',N(d.va),'VA',{fmt:VA}));
-  band=5; (S.appliances||[]).forEach(x=>put('Appliance',x.name||'',N(x.va),'VA',{fmt:VA,motor:x.motor?'Yes':'No',motorList:true}));
-  band=6; (S.evse||[]).forEach(e=>put('EV charger',e.name||'',N(e.va),'VA',{fmt:VA,setpoint:N(e.setpoint),setpointFmt:true,note:'Setpoint only with listed load management (120.7)'}));
-  band=7; (S.other||[]).forEach(x=>put('Other load',x.name||'',N(x.va),'VA',{fmt:VA}));
+  const VA='#,##0', N=v=>numOrBlank(v), h=S.hvac;
+  band=0; JOB_FIELDS.forEach(([k,l])=>put('job.'+k,'Job',l,k==='date'?fmtDate(S.job[k]||''):(S.job[k]||''),'',{fmt:'@'}));
+  band=1;
+  put('dw.sqft','Dwelling','Living area',N(S.sqft),'ft²',{fmt:VA,units:U_AREA,note:'Outside dimensions; no garage, open porch or unfinished space'});
+  put('dw.sa','Dwelling','Small-appliance circuits',N(S.sa),'circuits',{fmt:'0',note:'Minimum 2'});
+  put('dw.laundry','Dwelling','Laundry circuits',N(S.laundry),'circuits',{fmt:'0'});
+  put('dw.method','Dwelling','Method shown',S.method==='standard'?'Standard':'Optional','',{list:['Optional','Standard']});
+  put('dw.cookCombine','Dwelling','Cooktop and ovens as one range (Note 4)',S.cookCombine?'Yes':'No','',{list:['Yes','No'],note:'Standard method only'});
+  band=2;
+  put('hv.cool','Heating and cooling','Cooling (A/C or heat pump)',N(h.cool),'VA',{fmt:VA,units:U_POWER});
+  put('hv.heatType','Heating and cooling','Electric heat type',(HEAT.find(x=>x[0]===h.heatType)||HEAT[0])[1],'',{list:HEAT.map(x=>x[1])});
+  put('hv.hpComp','Heating and cooling','Heat pump compressor',N(h.hpComp),'VA',{fmt:VA,units:U_POWER,note:'Heat pump only'});
+  put('hv.hpSupp','Heating and cooling','Supplemental heat',N(h.hpSupp),'VA',{fmt:VA,units:U_POWER,note:'Heat pump only'});
+  put('hv.heat','Heating and cooling','Heating nameplate',N(h.heat)||'','VA',{fmt:VA,units:U_POWER,note:'Furnace, space heaters or thermal storage'});
+  put('hv.units','Heating and cooling','Number of space heaters',N(h.units),'count',{fmt:'0',note:'Space heaters only'});
+  put('hv.blower','Heating and cooling','Air handler / blower',N(h.blower),'VA',{fmt:VA,units:U_POWER});
+  put('hv.interlock','Heating and cooling','Compressor and supplemental interlocked',h.interlock?'Yes':'No','',{list:['Yes','No'],note:'Heat pump only'});
+  band=3; (S.cooking||[]).forEach(x=>put('cooking','Cooking',x.name||'',N(x.kw),'kW',{fmt:'#,##0.0##',units:U_KW}));
+  band=4; (S.dryers||[]).forEach(x=>put('dryer','Dryer',x.name||'',N(x.va),'VA',{fmt:VA,units:U_POWER}));
+  band=5; (S.appliances||[]).forEach(x=>put('appliance','Appliance',x.name||'',N(x.va),'VA',{fmt:VA,units:U_POWER,motor:x.motor?'Yes':'No',motorList:true}));
+  band=6; (S.evse||[]).forEach(x=>put('ev','EV charger',x.name||'',N(x.va),'VA',{fmt:VA,units:U_POWER,setpoint:N(x.setpoint),note:'Setpoint (same unit) only with listed load management, 120.7'}));
+  band=7; (S.other||[]).forEach(x=>put('other','Other load',x.name||'',N(x.va),'VA',{fmt:VA,units:U_POWER}));
   return ws;
 }
-function parseInputsV2(rows,X){
-  const hi=rows.findIndex(rw=>norm(rw[0])==='section'&&norm(rw[2])==='value'); if(hi<0) return null;
+// Reads the Inputs table by its header names, so columns can be moved. Rows are identified by the hidden ID;
+// rows without one (newly inserted) fall back to the Section text and, for fixed fields, the Item text.
+function parseInputsV2(rows,X,warn=[]){
+  const hi=rows.findIndex(rw=>rw&&rw.some(c=>norm(c)==='section')&&rw.some(c=>norm(c)==='value')); if(hi<0) return null;
+  const H=rows[hi].map(norm); const col=n=>H.findIndex(h=>h.startsWith(n));
+  const C={id:H.indexOf('id'),sec:col('section'),item:col('item'),val:col('value'),unit:col('unit'),motor:col('motor'),sp:col('setpoint')};
   const b=blank(); const o={...b,job:{...b.job},hvac:{...b.hvac},cooking:[],dryers:[],appliances:[],evse:[],other:[]};
-  const secOf=s=>{ s=norm(s); if(!s) return null; if(s.startsWith('job')) return 'job'; if(s.startsWith('dwell')) return 'dw'; if(s.startsWith('heat')||s.startsWith('hvac')||s.startsWith('cool')&&s.length>8) return 'hv'; if(s.startsWith('cook')||s.startsWith('rang')) return 'cooking'; if(s.startsWith('dry')) return 'dryers'; if(s.startsWith('appl')) return 'appliances'; if(s.startsWith('ev')) return 'evse'; if(s.startsWith('other')) return 'other'; return null; };
-  const DW2={livingarea:'sqft',smallappliancecircuits:'sa',laundrycircuits:'laundry',methodshown:'method'};
-  const HV2={cooling:'cool',electricheattype:'heatType',heatpumpcompressor:'hpComp',supplementalheat:'hpSupp',heatingnameplate:'heat',numberofspaceheaters:'units',airhandler:'blower',compressorandsupplemental:'interlock'};
-  const pick=(map,item)=>{ const n=norm(item); const k=Object.keys(map).find(k=>n.startsWith(k)); return k?map[k]:null; };
+  const g=(rw,k)=>C[k]>=0?rw[C[k]]:'';
+  const secOf=s=>{ s=norm(s); if(!s) return null; if(s.startsWith('job')) return 'job'; if(s.startsWith('dwell')) return 'dw'; if(s.startsWith('heat')||s.startsWith('hvac')) return 'hv'; if(s.startsWith('cook')||s.startsWith('rang')||s.startsWith('oven')) return 'cooking'; if(s.startsWith('dry')) return 'dryer'; if(s.startsWith('appl')) return 'appliance'; if(s.startsWith('ev')||s.startsWith('charg')) return 'ev'; if(s.startsWith('other')) return 'other'; return null; };
+  const BYLABEL={job:Object.fromEntries(JOB_FIELDS.map(([k,l])=>[norm(l),'job.'+k])),
+    dw:{livingarea:'dw.sqft',smallappliancecircuits:'dw.sa',laundrycircuits:'dw.laundry',methodshown:'dw.method',cooktop:'dw.cookCombine'},
+    hv:{cooling:'hv.cool',electricheattype:'hv.heatType',heatpumpcompressor:'hv.hpComp',supplementalheat:'hv.hpSupp',heatingnameplate:'hv.heat',numberofspaceheaters:'hv.units',airhandler:'hv.blower',compressorandsupplemental:'hv.interlock'}};
   for(let i=hi+1;i<rows.length;i++){
-    const rw=rows[i]; const sec=secOf(rw[0]); if(!sec) continue;
-    const item=String(rw[1]??'').trim(), val=rw[2];
-    if(sec==='job'){ const f=JOB_FIELDS.find(([,l])=>norm(l)===norm(item)); if(!f) continue; let v=val;
-      if(f[0]==='date'){ if(typeof v==='number'&&X){ const d=X.SSF.parse_date_code(v); v=d?`${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`:''; } else { const m=String(v??'').trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/); if(m){ const y=m[3].length===2?'20'+m[3]:m[3]; v=`${y}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`; } } }
-      o.job[f[0]]=String(v??'').trim(); continue; }
-    if(sec==='dw'){ if(/onerange|note4|cooktop/.test(norm(item))){ o.cookCombine=yn(val); continue; } const k=pick(DW2,item); if(!k) continue;
-      if(k==='method') o.method=/stand/i.test(String(val))?'standard':'optional'; else o[k]=numOrBlank(val); continue; }
-    if(sec==='hv'){ const k=pick(HV2,item); if(!k) continue;
-      if(k==='heatType'){ const s=String(val).toLowerCase(); o.hvac.heatType=/pump/.test(s)?'heatpump':/furnace|strip|central/.test(s)?'furnace':/space|baseboard|separate/.test(s)?'space':/storage|thermal/.test(s)?'storage':'none'; }
-      else if(k==='interlock') o.hvac.interlock=yn(val);
-      else o.hvac[k]=k==='units'?(parseInt(numOrBlank(val))||1):numOrBlank(val); continue; }
-    const v=numOrBlank(val); if(v===''&&!item) continue;
-    if(sec==='cooking') o.cooking.push({name:item,kw:v});
-    else if(sec==='dryers') o.dryers.push({name:item,va:v});
-    else if(sec==='appliances') o.appliances.push({name:item,va:v,motor:yn(rw[4])});
-    else if(sec==='evse') o.evse.push({name:item,va:v,setpoint:numOrBlank(rw[5])});
-    else if(sec==='other') o.other.push({name:item,va:v});
+    const rw=rows[i]; if(!rw||rw.every(x=>String(x??'').trim()==='')) continue;
+    let id=String(g(rw,'id')??'').trim(); const sec=secOf(g(rw,'sec')); const item=String(g(rw,'item')??'').trim();
+    if(!FIX[id]&&!LIST_ID[id]){ id=''; if(sec==='job'||sec==='dw'||sec==='hv'){ const m=BYLABEL[sec], n=norm(item); const k=Object.keys(m).find(k=>n.startsWith(k)); if(k) id=m[k]; } else if(sec) id=sec; }
+    if(!id) continue;
+    const val=g(rw,'val'), unit=g(rw,'unit'), where='Row '+(i+1)+(item?' ('+item+')':'');
+    if(FIX[id]){ const [grp,key,kind]=FIX[id]; const tgt=grp?o[grp]:o; let v;
+      if(kind==='text') v=String(val??'').trim();
+      else if(kind==='date'){ v=val; if(typeof v==='number'&&X){ const d=X.SSF.parse_date_code(v); v=d?`${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`:''; } else { const m=String(v??'').trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/); v=m?`${m[3].length===2?'20'+m[3]:m[3]}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`:String(v??'').trim(); } }
+      else if(kind==='method') v=/stand/i.test(String(val))?'standard':'optional';
+      else if(kind==='yesno') v=yn(val);
+      else if(kind==='heat'){ const s=String(val).toLowerCase(); v=/pump/.test(s)?'heatpump':/furnace|strip|central/.test(s)?'furnace':/space|baseboard|separate/.test(s)?'space':/storage|thermal/.test(s)?'storage':'none'; }
+      else if(kind==='int') v=key==='units'?(parseInt(numOrBlank(val))||1):numOrBlank(val);
+      else v=convert(val,unit,kind,warn,where);
+      tgt[key]=v; continue; }
+    const list=LIST_ID[id], kind=id==='cooking'?'kw':'power';
+    const v=convert(val,unit,kind,warn,where); if(v===''&&!item) continue;
+    if(list==='cooking') o.cooking.push({name:item,kw:v});
+    else if(list==='appliances') o.appliances.push({name:item,va:v,motor:yn(g(rw,'motor'))});
+    else if(list==='evse') o.evse.push({name:item,va:v,setpoint:convert(g(rw,'sp'),unit,'power',warn,where+' setpoint')});
+    else o[list].push({name:item,va:v});
   }
   if(o.sa!==''&&o.sa<2) o.sa=2;
   return o;
@@ -788,16 +825,16 @@ function applyLoaded(o){
 $('fileIn').addEventListener('change',async e=>{
   const f=e.target.files&&e.target.files[0]; if(!f) return; const st=$('status'); st.textContent='Reading '+f.name+'…';
   try{
-    let found=null; const isPdf=/\.pdf$/i.test(f.name)||f.type==='application/pdf';
+    let found=null; const warn=[]; const isPdf=/\.pdf$/i.test(f.name)||f.type==='application/pdf';
     if(isPdf){ const buf=await readBuf(f); found=unpackState(new TextDecoder('latin1').decode(buf)); }
     else{
       const X=await loadXLSX(); const wb=X.read(await readBuf(f),{type:'array'});
       const inName=wb.SheetNames.find(n=>/^inputs/i.test(n.trim()));
-      if(inName){ const rows=X.utils.sheet_to_json(wb.Sheets[inName],{header:1,raw:true,defval:''}); found=parseInputsV2(rows,X)||parseInputs(rows,X); }
+      if(inName){ const rows=X.utils.sheet_to_json(wb.Sheets[inName],{header:1,raw:true,defval:''}); found=parseInputsV2(rows,X,warn)||parseInputs(rows,X); }
       if(!found) outer: for(const n of wb.SheetNames){ const ws=wb.Sheets[n]; for(const k in ws){ if(k[0]==='!') continue; const v=ws[k]&&ws[k].v; if(typeof v==='string'&&v.indexOf(MARK)===0){ found=unpackState(v); if(found) break outer; } } }
     }
     if(!found){ st.textContent='No calculator data found in '+f.name+'. Only PDF and Excel files downloaded from this calculator can be loaded.'; return; }
-    applyLoaded(found); st.textContent='Loaded '+f.name+'. Check the entries before reusing them.'; window.scrollTo({top:0,behavior:'smooth'});
+    applyLoaded(found); st.textContent='Loaded '+f.name+'. Check the entries before reusing them.'+(warn.length?' Note: '+warn.join('; ')+'.':''); window.scrollTo({top:0,behavior:'smooth'});
   }catch(err){ st.textContent='Could not read '+f.name+': '+(err&&err.message||err); }
 });
 function fmtDate(v){const p=String(v).split('-'); return p.length===3?`${+p[1]}/${+p[2]}/${p[0]}`:v;}
