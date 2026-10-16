@@ -590,7 +590,7 @@ let xlsxP=null;
 function loadXLSX(){ if(window.XLSX) return Promise.resolve(window.XLSX); if(!xlsxP){ xlsxP=new Promise((res,rej)=>{ const s=document.createElement('script'); s.src=XLSX_URL; s.onload=()=>window.XLSX?res(window.XLSX):rej(new Error('Excel library missing')); s.onerror=()=>{xlsxP=null; rej(new Error('Excel library did not load'));}; document.head.appendChild(s); }); } return xlsxP; }
 function methodSheet(X,m){
   const r=LC[m](S), cc=LC.circuits(S.sqft);
-  const rows=[['Dwelling Service Load Calculation'],[m==='optional'?'Optional method, NEC 2026 120.82':'Standard method, NEC 2026 Article 120 Part III'],['120/240 V, single-phase, 3-wire'],[]];
+  const rows=[['Dwelling Service Load Calculation'],['To change this job, edit the Inputs tab and upload this file to the calculator. Edits on this tab are not read.'],[m==='optional'?'Optional method, NEC 2026 120.82':'Standard method, NEC 2026 Article 120 Part III'],['120/240 V, single-phase, 3-wire'],[]];
   JOB_FIELDS.forEach(([k,l])=>{ const v=String(S.job[k]||'').trim(); if(v) rows.push([l,k==='date'?fmtDate(v):v]); });
   if(rows.length>4) rows.push([]);
   rows.push(['Minimum service (A)',r.service||'']);
@@ -613,13 +613,60 @@ async function makeXLSX(btn){
     const X=await loadXLSX(); const wb=X.utils.book_new(); const m=S.method, o=m==='optional'?'standard':'optional';
     X.utils.book_append_sheet(wb,methodSheet(X,m),m==='optional'?'Optional 120.82':'Standard Part III');
     X.utils.book_append_sheet(wb,methodSheet(X,o),o==='optional'?'Optional 120.82':'Standard Part III');
-    const data=X.utils.aoa_to_sheet([['Calculator data. Do not edit. Used by Upload PDF / Excel to reload this job.'],[packState()]]);
-    X.utils.book_append_sheet(wb,data,'Data');
-    wb.Workbook={Sheets:[{Hidden:0},{Hidden:0},{Hidden:1}]};
+    X.utils.book_append_sheet(wb,inputsSheet(X),'Inputs');
     const name=fileBase(m)+'.xlsx';
     X.writeFile(wb,name); st.textContent='Excel file downloaded: '+name;
   }catch(err){ st.textContent='Could not build the Excel file: '+(err&&err.message||err)+'. Check your connection and try again.'; }
   finally{ btn.disabled=false; }
+}
+const HEAT=[['none','None'],['heatpump','Heat pump'],['furnace','Central electric furnace / strips'],['space','Separately controlled space heaters'],['storage','Electric thermal storage']];
+const SEC={job:'JOB INFORMATION',dw:'DWELLING',hv:'HEATING & COOLING',cooking:'COOKING',dryers:'CLOTHES DRYERS',appliances:'FASTENED-IN-PLACE APPLIANCES',evse:'EV CHARGERS',other:'OTHER LOADS'};
+const DW=[['sqft','Living area (ft²)'],['sa','Small-appliance circuits (min 2)'],['laundry','Laundry circuits'],['method','Method shown (Optional or Standard)'],['cookCombine','Treat cooktop + ovens as one range (Yes/No)']];
+const HV=[['cool','Cooling (A/C or heat pump) VA'],['heatType','Electric heat type'],['hpComp','Heat pump compressor VA'],['hpSupp','Supplemental heat VA'],['heat','Heating nameplate VA (furnace, space heaters, storage)'],['units','Number of space heaters'],['blower','Air handler / blower VA'],['interlock','Compressor and supplemental heat interlocked (Yes/No)']];
+const TBL={cooking:[['name','Appliance'],['kw','kW']],dryers:[['name','Dryer'],['va','VA']],appliances:[['name','Appliance'],['va','VA'],['motor','Motor (Yes/No)']],evse:[['name','Charger'],['va','Nameplate VA'],['setpoint','Setpoint VA (load management, optional)']],other:[['name','Load'],['va','VA']]};
+const yn=v=>v===true||/^(y|yes|true|x|1)$/i.test(String(v).trim());
+const numOrBlank=v=>{ if(v===''||v==null) return ''; const n=parseFloat(String(v).replace(/[,\s]/g,'').replace(/(va|kw|ft²|ft2|a)$/i,'')); return isFinite(n)?n:''; };
+const norm=s=>String(s).toLowerCase().replace(/[^a-z0-9]/g,'');
+function inputsSheet(X){
+  const R=[['Load calc inputs. Change values in column B and the tables below, add or delete table rows, then upload this file to the calculator. Keep the labels in column A as they are.'],[]];
+  R.push([SEC.job]); JOB_FIELDS.forEach(([k,l])=>R.push([l,k==='date'?fmtDate(S.job[k]||''):(S.job[k]||'')])); R.push([]);
+  R.push([SEC.dw]); DW.forEach(([k,l])=>R.push([l,k==='method'?(S.method==='standard'?'Standard':'Optional'):k==='cookCombine'?(S.cookCombine?'Yes':'No'):numOrBlank(S[k])])); R.push([]);
+  R.push([SEC.hv,'','Heat type options: '+HEAT.map(h=>h[1]).join(', ')]);
+  HV.forEach(([k,l])=>{ const v=S.hvac[k]; R.push([l,k==='heatType'?(HEAT.find(h=>h[0]===v)||HEAT[0])[1]:k==='interlock'?(v?'Yes':'No'):numOrBlank(v)]); }); R.push([]);
+  Object.keys(TBL).forEach(key=>{ const cols=TBL[key]; R.push([SEC[key]]); R.push(cols.map(c=>c[1]));
+    (S[key]||[]).forEach(r=>R.push(cols.map(([k])=>k==='motor'?(r.motor?'Yes':'No'):k==='name'?(r.name||''):numOrBlank(r[k]))));
+    R.push([]); });
+  const ws=X.utils.aoa_to_sheet(R); ws['!cols']=[{wch:52},{wch:24},{wch:40}]; return ws;
+}
+function parseInputs(rows,X){
+  const b=blank(); const o={...b,job:{...b.job},hvac:{...b.hvac},cooking:[],dryers:[],appliances:[],evse:[],other:[]};
+  const secByTitle={}; Object.entries(SEC).forEach(([k,v])=>secByTitle[norm(v)]=k);
+  let sec=null, seen=0, hdr=false;
+  const findLabel=(list,a)=>list.find(([,l])=>norm(l)===a)||list.find(([,l])=>a&&norm(l).startsWith(a.slice(0,14)));
+  for(const row of rows){
+    const A=row[0], a=norm(A);
+    if(a&&secByTitle[a]){ sec=secByTitle[a]; seen++; hdr=false; continue; }
+    if(!sec||row.every(c=>String(c).trim()==='')) continue;
+    if(sec==='job'){ const f=findLabel(JOB_FIELDS,a); if(!f) continue; let v=row[1];
+      if(f[0]==='date'){ if(typeof v==='number'&&X){ const d=X.SSF.parse_date_code(v); v=d?`${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`:''; } else { const m=String(v).trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/); if(m){ const y=m[3].length===2?'20'+m[3]:m[3]; v=`${y}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`; } } }
+      o.job[f[0]]=String(v??'').trim(); continue; }
+    if(sec==='dw'){ const f=findLabel(DW,a); if(!f) continue; const v=row[1];
+      if(f[0]==='method') o.method=/stand/i.test(String(v))?'standard':'optional';
+      else if(f[0]==='cookCombine') o.cookCombine=yn(v);
+      else o[f[0]]=numOrBlank(v); continue; }
+    if(sec==='hv'){ const f=findLabel(HV,a); if(!f) continue; const v=row[1];
+      if(f[0]==='heatType'){ const s=String(v).toLowerCase(); o.hvac.heatType=/pump/.test(s)?'heatpump':/furnace|strip|central/.test(s)?'furnace':/space|baseboard|separate/.test(s)?'space':/storage|thermal/.test(s)?'storage':'none'; }
+      else if(f[0]==='interlock') o.hvac.interlock=yn(v);
+      else o.hvac[f[0]]=f[0]==='units'?(parseInt(numOrBlank(v))||1):numOrBlank(v); continue; }
+    if(TBL[sec]){ const cols=TBL[sec];
+      if(!hdr&&norm(row[0])===norm(cols[0][1])){ hdr=true; continue; }
+      const item={}; cols.forEach(([k],i)=>{ const v=row[i]; item[k]=k==='motor'?yn(v):k==='name'?String(v??'').trim():numOrBlank(v); });
+      if(cols.slice(1).every(([k])=>k==='motor'||item[k]==='')&&!item.name) continue;
+      o[sec].push(item); }
+  }
+  if(seen<3) return null;
+  if(o.sa!==''&&o.sa<2) o.sa=2;
+  return o;
 }
 function readBuf(f){ if(f.arrayBuffer) return f.arrayBuffer(); return new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.onerror=()=>rej(fr.error); fr.readAsArrayBuffer(f); }); }
 function applyLoaded(o){
@@ -635,7 +682,9 @@ $('fileIn').addEventListener('change',async e=>{
     if(isPdf){ const buf=await readBuf(f); found=unpackState(new TextDecoder('latin1').decode(buf)); }
     else{
       const X=await loadXLSX(); const wb=X.read(await readBuf(f),{type:'array'});
-      outer: for(const n of wb.SheetNames){ const ws=wb.Sheets[n]; for(const k in ws){ if(k[0]==='!') continue; const v=ws[k]&&ws[k].v; if(typeof v==='string'&&v.indexOf(MARK)===0){ found=unpackState(v); if(found) break outer; } } }
+      const inName=wb.SheetNames.find(n=>/^inputs/i.test(n.trim()));
+      if(inName) found=parseInputs(X.utils.sheet_to_json(wb.Sheets[inName],{header:1,raw:true,defval:''}),X);
+      if(!found) outer: for(const n of wb.SheetNames){ const ws=wb.Sheets[n]; for(const k in ws){ if(k[0]==='!') continue; const v=ws[k]&&ws[k].v; if(typeof v==='string'&&v.indexOf(MARK)===0){ found=unpackState(v); if(found) break outer; } } }
     }
     if(!found){ st.textContent='No calculator data found in '+f.name+'. Only PDF and Excel files downloaded from this calculator can be loaded.'; return; }
     applyLoaded(found); st.textContent='Loaded '+f.name+'. Check the entries before reusing them.'; window.scrollTo({top:0,behavior:'smooth'});
