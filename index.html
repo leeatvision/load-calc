@@ -1,5 +1,14 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#78B83F">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Load Calc">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="format-detection" content="telephone=no">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
 <title>Residential Service Sizing</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -24,6 +33,8 @@
   --accent:#8DC44D; --accent-hover:#A0D166; --accent-ink:#111111; --accent-text:#A0D166; --accent-soft:#22301A;
   --t1:#262626; --t2:#1F2A17; --t3:#2B2414; --t4:#2C2C2C; --t5:#24331A; --t6:#262626; --t7:#1C2614; --t8:#212121; --warn:#E8A020; --warn-soft:#2E2410; color-scheme:dark}
 *{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+button,select,summary,label.chk{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.5;font-variant-numeric:tabular-nums}
 .wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 96px}
 header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px;margin-bottom:16px}
@@ -46,19 +57,21 @@ section.card{background:var(--surface);border:1px solid var(--line);border-radiu
 .fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px 12px}
 label.f{display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:600;color:var(--ink);min-width:0}
 input,select{font:inherit;font-size:16px;font-weight:400;color:var(--ink);background:var(--surface);border:1px solid var(--field);border-radius:4px;padding:10px 12px;width:100%;min-width:0}
+select{-webkit-appearance:none;appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 18px) 50%,calc(100% - 13px) 50%;background-size:5px 5px;background-repeat:no-repeat;padding-right:32px}
 
-input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent)}
+input[type=checkbox]{width:22px;height:22px;flex:none;accent-color:var(--accent)}
 .rows{display:flex;flex-direction:column;gap:8px}
 .row{display:grid;grid-template-columns:minmax(0,1fr) 120px auto auto;gap:8px;align-items:center}
 .row.nomotor{grid-template-columns:minmax(0,1fr) 120px auto}
 .row.ev{grid-template-columns:minmax(0,1fr) 110px 110px auto}
 .rowhead{font-size:13px;font-weight:600;color:var(--muted)}
 .chk{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--ink);white-space:nowrap}
-.x{appearance:none;border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:4px;width:34px;height:36px;cursor:pointer;font-size:18px;line-height:1}
+.x{appearance:none;border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:4px;width:44px;height:44px;cursor:pointer;font-size:18px;line-height:1}
 .x:hover{color:var(--ink);border-color:var(--muted)}
-.add{appearance:none;align-self:flex-start;border:1px solid var(--line);background:none;color:var(--accent-text);border-radius:4px;padding:8px 14px;font:inherit;font-weight:600;font-size:14px;cursor:pointer}
+.add{appearance:none;align-self:flex-start;min-height:44px;border:1px solid var(--line);background:none;color:var(--accent-text);border-radius:4px;padding:8px 14px;font:inherit;font-weight:600;font-size:14px;cursor:pointer}
 .add:hover{border-color:var(--accent)}
-@media (max-width:520px){.row,.row.nomotor,.row.ev{grid-template-columns:minmax(0,1fr) 96px auto}.row .chk{grid-column:1/-1;order:5}.row.ev .sp{grid-column:1/2}}
+@media (max-width:520px){.wrap{padding-block:12px 96px}h1{font-size:24px}.code{font-size:12px}section.card{padding:14px 12px}.tab{flex:1 1 0;padding:10px 6px 8px;font-size:15px}.tab small{display:block;margin:2px 0 0}.btn{min-height:44px}.plate{padding:14px}.plate .svc{font-size:46px}.ws td:first-child{padding-left:12px}.ws td{padding-right:12px}.actions,.compare,.meta{padding-left:12px;padding-right:12px}.compare{margin-left:0;margin-right:0}.status{padding-left:12px;padding-right:12px}
+.row,.row.nomotor,.row.ev{grid-template-columns:minmax(0,1fr) 96px auto}.row .chk{grid-column:1/-1;order:5}.row.ev .sp{grid-column:1/2}}
 details.job summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
 details.job summary::-webkit-details-marker{display:none}
 details.job summary .tog{font-size:13px;color:var(--accent-text);font-weight:600}
@@ -87,7 +100,7 @@ details.job[open] summary{margin-bottom:10px}
 .warnbox{margin:0 18px 12px;background:var(--warn-soft);color:var(--warn);border-radius:4px;padding:10px 12px;font-size:13px}
 .warnbox p{margin:0} .warnbox p+p{margin-top:6px}
 .compare{margin:12px 18px;display:flex;justify-content:space-between;gap:10px;align-items:center;font-size:13px;color:var(--muted);flex-wrap:wrap}
-.compare button{appearance:none;border:1px solid var(--line);background:var(--sunk);color:var(--ink);border-radius:4px;padding:6px 10px;font:inherit;font-size:13px;cursor:pointer}
+.compare button{appearance:none;min-height:40px;border:1px solid var(--line);background:var(--sunk);color:var(--ink);border-radius:4px;padding:6px 10px;font:inherit;font-size:13px;cursor:pointer}
 .actions{display:flex;flex-wrap:nowrap;gap:8px;padding:14px 18px 10px}
 .actions .btn{flex:1 1 auto;min-width:0;white-space:nowrap;padding:9px 8px;font-size:14px;text-align:center}
 .status:empty{display:none}
