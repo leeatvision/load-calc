@@ -42,7 +42,7 @@ header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:spac
 .eyebrow .mark{height:19px;width:auto;display:block}
 h1{font-family:var(--f-display);font-weight:700;font-size:clamp(26px,4vw,32px);line-height:1.2;margin:4px 0 0;text-wrap:balance}
 .code{font-size:13px;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:4px 8px;background:var(--surface)}
-.tabs{display:flex;gap:4px;border-bottom:2px solid var(--line);margin-bottom:18px;overflow-x:auto}
+.tabs{display:flex;gap:4px;border-bottom:2px solid var(--line);margin-bottom:18px}
 .tab{appearance:none;border:0;background:none;color:var(--muted);font-weight:600;font-size:16px;padding:10px 16px 8px;border-bottom:3px solid transparent;margin-bottom:-2px;cursor:pointer;white-space:nowrap}
 .tab small{font-size:13px;font-weight:400;margin-left:6px}
 .tab[aria-selected="true"]{color:var(--accent-text);border-bottom-color:var(--accent)}
@@ -633,8 +633,8 @@ const r1=v=>typeof v==='number'?Math.round(v*10)/10:v;
 function resultsWS(wb,m,logo){
   const r=LC[m](S), cc=LC.circuits(S.sqft);
   const ws=wb.addWorksheet(m==='optional'?'Optional 120.82':'Standard Part III',{views:[{state:'frozen',ySplit:14,showGridLines:false}],pageSetup:{orientation:'landscape',fitToPage:true,fitToWidth:1,fitToHeight:0,margins:{left:0.4,right:0.4,top:0.5,bottom:0.5,header:0.3,footer:0.3}}});
-  ws.columns=[{width:15},{width:40},{width:11},{width:13},{width:9},{width:14},{width:14},{width:11},{width:14},{width:12},{width:52}];
-  addLogo(wb,ws,logo,8.7);
+  ws.columns=[{width:40},{width:11},{width:13},{width:9},{width:14},{width:14},{width:11},{width:14},{width:12},{width:52}];
+  addLogo(wb,ws,logo,7.2);
   sheetTitle(ws,m==='optional'?'Optional method':'Standard method',m==='optional'?'NEC 2026 120.82, one-family dwelling, 120/240 V single-phase':'NEC 2026 Article 120 Part III, one-family dwelling, 120/240 V single-phase','Calculated results. To change this job, edit the Inputs tab and upload this file to the calculator.');
   // key results: label | value | unit
   let row=5;
@@ -652,26 +652,26 @@ function resultsWS(wb,m,logo){
   kv('Minimum 15 A general-purpose circuits (120.13)',S.sqft?cc.c15:'','circuits','0');
   kv('Minimum 20 A general-purpose circuits (120.13)',S.sqft?cc.c20:'','circuits','0');
   row=14;
-  const R=[2,4,6,7,8];
-  headerRow(ws,row,['NEC ref.','Load','Quantity','Quantity unit','Rate','Rate unit','Connected (VA)','Demand (%)','Calculated (VA)','In total','Basis'],R);
-  ws.autoFilter={from:{row,column:1},to:{row,column:11}};
+  const R=[1,3,5,6,7];
+  headerRow(ws,row,['Load','Quantity','Quantity unit','Rate','Rate unit','Connected (VA)','Demand (%)','Calculated (VA)','In total','Basis'],R);
+  ws.autoFilter={from:{row,column:1},to:{row,column:10}};
   row++;
   const write=(vals,style)=>{ vals.forEach((v,i)=>{ const c=ws.getCell(row,i+1); c.value=blankIf(v); c.border=boxed;
-      c.alignment={vertical:'top',wrapText:i===1||i===10,horizontal:R.includes(i)?'right':'left'};
-      if(i===2||i===4) c.numFmt='#,##0.###'; if(i===6||i===8) c.numFmt='#,##0'; if(i===7) c.numFmt='0.0';
+      c.alignment={vertical:'top',wrapText:i===0||i===9,horizontal:R.includes(i)?'right':'left'};
+      if(i===1||i===3) c.numFmt='#,##0.###'; if(i===5||i===7) c.numFmt='#,##0'; if(i===6) c.numFmt='0.0';
       c.font={size:style==='part'?10:11,bold:style==='total',italic:style==='part',color:{argb:style==='part'||style==='sub'?XC.muted:XC.ink}};
       if(style==='sub') c.fill={type:'pattern',pattern:'solid',fgColor:{argb:XC.gray}};
       if(style==='total') c.fill={type:'pattern',pattern:'solid',fgColor:{argb:XC.tint}}; });
     row++; };
   r.lines.forEach(l=>{ const x=l.x||{};
     const pct=x.pct!==undefined&&x.pct!==''?x.pct:(!l.sub&&x.conn?r1(l.va/x.conn*100):'');
-    write([l.ref,l.label,x.qty,x.qu,x.rate,x.ru,x.conn,l.sub?'':pct,l.sub?'':Math.round(l.va),l.sub?'Component':'Yes',x.basis||''],l.sub?'sub':'line');
-    (l.parts||[]).forEach(p=>write(['','   '+p.label,p.qty,p.qu,p.rate,p.ru,p.conn!=null?Math.round(p.conn):'',p.pct,p.va!=null&&p.va!==''?Math.round(p.va):'','',p.basis||''],'part'));
+    write([l.label,x.qty,x.qu,x.rate,x.ru,x.conn,l.sub?'':pct,l.sub?'':Math.round(l.va),l.sub?'Component':'Yes',x.basis||''],l.sub?'sub':'line');
+    (l.parts||[]).forEach(p=>write(['   '+p.label,p.qty,p.qu,p.rate,p.ru,p.conn!=null?Math.round(p.conn):'',p.pct,p.va!=null&&p.va!==''?Math.round(p.va):'','',p.basis||''],'part'));
   });
-  write(['','Calculated load','','','','','','',Math.round(r.total),'',''],'total');
+  write(['Calculated load','','','','','','',Math.round(r.total),'',''],'total');
   row++;
   const notes=[...r.warn,'Component rows are totaled into the demand line below them and are not added again. Indented rows show what makes up the line above them.','Calculated per the 2026 NEC as adopted in Colorado (effective Aug 1, 2026). Verify against the adopted code and local amendments.'];
-  notes.forEach(n=>{ ws.mergeCells(row,1,row,11); const c=ws.getCell(row,1); c.value='• '+n; c.font={size:9,color:{argb:XC.muted}}; c.alignment={wrapText:true,vertical:'top'}; ws.getRow(row).height=Math.max(15,Math.ceil(n.length/170)*13); row++; });
+  notes.forEach(n=>{ ws.mergeCells(row,1,row,10); const c=ws.getCell(row,1); c.value='• '+n; c.font={size:9,color:{argb:XC.muted}}; c.alignment={wrapText:true,vertical:'top'}; ws.getRow(row).height=Math.max(15,Math.ceil(n.length/170)*13); row++; });
   return ws;
 }
 function summaryWS(wb,logo){
@@ -732,7 +732,12 @@ const DW=[['sqft','Living area (ft²)'],['sa','Small-appliance circuits (min 2)'
 const HV=[['cool','Cooling (A/C or heat pump) VA'],['heatType','Electric heat type'],['hpComp','Heat pump compressor VA'],['hpSupp','Supplemental heat VA'],['heat','Heating nameplate VA (furnace, space heaters, storage)'],['units','Number of space heaters'],['blower','Air handler / blower VA'],['interlock','Compressor and supplemental heat interlocked (Yes/No)']];
 const TBL={cooking:[['name','Appliance'],['kw','kW']],dryers:[['name','Dryer'],['va','VA']],appliances:[['name','Appliance'],['va','VA'],['motor','Motor (Yes/No)']],evse:[['name','Charger'],['va','Nameplate VA'],['setpoint','Setpoint VA (load management, optional)']],other:[['name','Load'],['va','VA']]};
 const yn=v=>v===true||/^(y|yes|true|x|1)$/i.test(String(v).trim());
-const numOrBlank=v=>{ if(v===''||v==null) return ''; const n=parseFloat(String(v).replace(/[,\s]/g,'').replace(/(va|kw|ft²|ft2|a)$/i,'')); return isFinite(n)?n:''; };
+const numOrBlank=v=>{ if(v===''||v==null) return ''; if(typeof v==='number') return isFinite(v)?v:'';
+  let s=String(v).replace(/\s/g,'').replace(/(kva|va|kw|w|ft²|ft2|sqft|a)$/i,'');
+  if(/^-?\d{1,3}(,\d{3})+(\.\d+)?$/.test(s)) s=s.replace(/,/g,'');      // 4,500 or 12,000.5: thousands separators
+  else if(/^-?\d+,\d{1,2}$/.test(s)) s=s.replace(',','.');               // 7,4 or 45,00: comma used as decimal point
+  else s=s.replace(/,/g,'');                                               // anything else: drop stray commas
+  const n=parseFloat(s); return isFinite(n)?n:''; };
 const norm=s=>String(s).toLowerCase().replace(/[^a-z0-9]/g,'');
 const IN_HDR=['ID','Section','Item','Value','Unit','Motor (Yes/No)','Setpoint','Notes'];
 const U_POWER=['VA','W','kVA','kW','A'], U_KW=['kW','kVA','VA','W','A'], U_AREA=['ft²','m²'];
