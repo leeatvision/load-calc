@@ -132,7 +132,8 @@ details.job[open] summary{margin-bottom:10px}
 .foot{margin-top:22px;color:var(--muted);font-size:12.5px;max-width:75ch}
 .mbar{display:none}
 @media (max-width:900px){.mbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:5;justify-content:space-between;align-items:center;gap:12px;background:var(--accent);color:var(--accent-ink);padding:10px max(16px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));font-weight:600;font-size:15px}
-.mbar a{color:inherit;font-size:14px;font-family:var(--f-body)}}
+.mbar a,.mbar .mlink{color:inherit;font-size:14px;font-family:var(--f-body)}
+.mbar .mlink{appearance:none;background:none;border:0;padding:8px 0;font-weight:600;text-decoration:underline;cursor:pointer}}
 @media (prefers-reduced-motion:no-preference){.plate .svc{transition:opacity .15s}}
 </style>
 
@@ -512,7 +513,7 @@ function renderResult(){
     ${r.warn.length?`<div class="warnbox" style="margin-top:12px">${r.warn.map(w=>`<p>${esc(w)}</p>`).join('')}</div>`:''}
     <div style="overflow-x:auto"><table class="ws"><tbody>${rows}</tbody></table></div>
     <div class="compare"><span>${m==='optional'?'Standard':'Optional'} method: <b style="color:var(--ink)">${other.amps} A → ${other.service||'—'} A</b></span><button type="button" data-switch="${m==='optional'?'standard':'optional'}">View ${m==='optional'?'standard':'optional'}</button></div>`;
-  $('mbar').innerHTML=`<span>${m==='optional'?'Optional':'Standard'}: ${r.amps} A → ${r.service||'—'} A service</span><a href="#result">Worksheet</a>`;
+  $('mbar').innerHTML=`<span>${m==='optional'?'Optional':'Standard'}: ${r.amps} A → ${r.service||'—'} A service</span><button type="button" class="mlink" data-jump="result">Worksheet</button>`;
 }
 function touched(){ if(isExample){isExample=false;} save(); }
 document.addEventListener('input',e=>{
@@ -528,6 +529,7 @@ document.addEventListener('input',e=>{
 document.addEventListener('change',e=>{ if(e.target.dataset.hv==='heatType'||e.target.type==='checkbox'){ /* handled on input */ } });
 document.addEventListener('click',e=>{
   const b=e.target.closest('button,summary'); if(!b) return;
+  if(b.dataset.jump){ $(b.dataset.jump).scrollIntoView({behavior:'smooth',block:'start'}); return; }
   if(b.hasAttribute('data-cleardate')){ const d=$('job-date'); d.value=''; S.job.date=''; touched(); renderResult(); return; }
   if(b.dataset.m){S.method=b.dataset.m; save(); renderMethodText(); renderResult(); return;}
   if(b.dataset.switch){S.method=b.dataset.switch; save(); renderMethodText(); renderResult(); window.scrollTo({top:0,behavior:'smooth'}); return;}
@@ -914,6 +916,8 @@ $('fileIn').addEventListener('change',async e=>{
 });
 function fmtDate(v){const p=String(v).split('-'); return p.length===3?`${+p[1]}/${+p[2]}/${p[0]}`:v;}
 renderAll();
+try{ if('scrollRestoration' in history) history.scrollRestoration='manual'; if(location.hash) history.replaceState(null,'',location.pathname+location.search); }catch(e){}
+window.scrollTo(0,0); window.addEventListener('pageshow',()=>window.scrollTo(0,0));
 })();
 </script>
 
