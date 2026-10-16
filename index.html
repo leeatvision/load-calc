@@ -70,9 +70,9 @@ input[type=checkbox]{width:22px;height:22px;flex:none;accent-color:var(--accent)
 .fields.stack label.f{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,260px);align-items:center;gap:12px}
 .fields.stack .chk{grid-column:1/-1}
 .rows{display:flex;flex-direction:column;gap:8px}
-.row{display:grid;grid-template-columns:minmax(0,1fr) 120px 48px 44px;gap:8px;align-items:center}
-.row.nomotor{grid-template-columns:minmax(0,1fr) 120px 44px}
-.row.ev{grid-template-columns:minmax(0,1fr) 110px 110px 44px}
+.row{display:grid;grid-template-columns:minmax(0,1fr) 64px 120px 48px 44px;gap:8px;align-items:center}
+.row.nomotor{grid-template-columns:minmax(0,1fr) 64px 120px 44px}
+.row.ev{grid-template-columns:minmax(0,1fr) 64px 120px 120px 44px}
 .rowhead{font-size:13px;font-weight:600;color:var(--muted)}
 .chk{display:flex;align-items:flex-start;gap:10px;font-size:14px;color:var(--ink);min-width:0}
 .chk input{margin-top:1px}
@@ -85,7 +85,7 @@ input[type=checkbox]{width:22px;height:22px;flex:none;accent-color:var(--accent)
 .add:hover{border-color:var(--accent)}
 @media (max-width:520px){.wrap{padding-block:12px 96px}h1{font-size:24px}.code{font-size:12px}section.card{padding:14px 12px}.tab{flex:1 1 0;padding:10px 6px 8px;font-size:15px}.tab small{display:block;margin:2px 0 0}.btn{min-height:44px}.plate{padding:14px}.plate .svc{font-size:46px}.ws td:first-child{padding-left:12px}.ws td{padding-right:12px}.actions,.compare,.meta{padding-left:12px;padding-right:12px}.compare{margin-left:0;margin-right:0}.status{padding-left:12px;padding-right:12px}
 .fields{grid-template-columns:minmax(0,1fr)}label.f{justify-content:flex-start}.fields.stack label.f{display:flex;flex-direction:column;align-items:stretch;gap:6px}
-.row{grid-template-columns:minmax(0,1fr) 84px 44px 44px}.row.nomotor{grid-template-columns:minmax(0,1fr) 96px 44px}.row.ev{grid-template-columns:minmax(0,1fr) 84px 84px 44px}.row input{padding-left:10px;padding-right:8px}}
+.row{grid-template-columns:56px minmax(0,1fr) 44px 44px}.row.nomotor{grid-template-columns:56px minmax(0,1fr) 44px}.row.ev{grid-template-columns:56px minmax(0,1fr) minmax(0,1fr) 44px}.row>:first-child{grid-column:1/-1}.rows .row:not(.rowhead){padding-bottom:6px;border-bottom:1px solid var(--line)}.row input{padding-left:10px;padding-right:8px}}
 details.job summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
 details.job summary::-webkit-details-marker{display:none}
 details.job summary .tog{font-size:13px;color:var(--accent-text);font-weight:600}
@@ -299,7 +299,18 @@ const LC = (() => {
       interlock: !!h.interlock, units: Math.max(1, parseInt(h.units) || 1) };
   }
 
-  function standard(s) {
+  // A row with Qty > 1 is counted as that many separate units, so count-based rules
+  // (75% for four or more appliances, Table 120.55 columns, the 7,200 VA EV minimum, largest motor) still apply.
+  function expandQty(arr) {
+    const out = [];
+    (arr || []).forEach(it => { const q = Math.max(1, Math.min(50, parseInt(it.qty) || 1));
+      for (let i = 0; i < q; i++) out.push(q > 1 ? { ...it, qty: 1, name: (it.name || '') + ` (${i + 1} of ${q})` } : it); });
+    return out;
+  }
+  const prep = s => ({ ...s, cooking: expandQty(s.cooking), dryers: expandQty(s.dryers), appliances: expandQty(s.appliances), evse: expandQty(s.evse), other: expandQty(s.other) });
+
+  function standard(s0) {
+    const s = prep(s0);
     const lines = [], warn = [];
     const sqft = num(s.sqft), sa = Math.max(2, parseInt(s.sa) || 0), ld = Math.max(0, parseInt(s.laundry) || 0);
     // 1. General lighting group
@@ -360,7 +371,8 @@ const LC = (() => {
     return finish(lines, total, warn);
   }
 
-  function optional(s) {
+  function optional(s0) {
+    const s = prep(s0);
     const lines = [], warn = [];
     const sqft = num(s.sqft), sa = Math.max(2, parseInt(s.sa) || 0), ld = Math.max(0, parseInt(s.laundry) || 0);
     const gl = sqft * 2, sav = (sa + ld) * 1500;
@@ -439,11 +451,11 @@ const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&g
 const fmt=LC.fmt;
 
 const LISTS={
-  cooking:{cols:[['name','text','Appliance'],['kw','number','kW']],blank:{name:'',kw:''},add:'Add cooking appliance'},
-  dryers:{cols:[['name','text','Dryer'],['va','number','VA']],blank:{name:'Dryer',va:''},add:'Add dryer'},
-  appliances:{cols:[['name','text','Appliance'],['va','number','VA']],motor:true,blank:{name:'',va:'',motor:false},add:'Add appliance'},
-  evse:{cols:[['name','text','Charger'],['va','number','Nameplate VA'],['setpoint','number','Setpoint VA']],ev:true,blank:{name:'EV charger',va:'',setpoint:''},add:'Add EV charger'},
-  other:{cols:[['name','text','Load'],['va','number','VA']],blank:{name:'',va:''},add:'Add load'}
+  cooking:{cols:[['name','text','Appliance'],['qty','number','Qty'],['kw','number','kW each']],blank:{name:'',qty:1,kw:''},add:'Add cooking appliance'},
+  dryers:{cols:[['name','text','Dryer'],['qty','number','Qty'],['va','number','VA each']],blank:{name:'Dryer',qty:1,va:''},add:'Add dryer'},
+  appliances:{cols:[['name','text','Appliance'],['qty','number','Qty'],['va','number','VA each']],motor:true,blank:{name:'',qty:1,va:'',motor:false},add:'Add appliance'},
+  evse:{cols:[['name','text','Charger'],['qty','number','Qty'],['va','number','Nameplate VA each'],['setpoint','number','Setpoint VA each']],ev:true,blank:{name:'EV charger',qty:1,va:'',setpoint:''},add:'Add EV charger'},
+  other:{cols:[['name','text','Load'],['qty','number','Qty'],['va','number','VA each']],blank:{name:'',qty:1,va:''},add:'Add load'}
 };
 function renderList(key){
   const cfg=LISTS[key], box=$('list-'+key), arr=S[key];
@@ -452,7 +464,7 @@ function renderList(key){
     h+=`<div class="row ${cfg.motor?'':cfg.ev?'ev':'nomotor'} rowhead">`+cfg.cols.map(c=>`<span>${c[2]}</span>`).join('')+(cfg.motor?'<span style="text-align:center">Motor</span>':'')+'<span></span></div>';
   }
   arr.forEach((r,i)=>{
-    h+=`<div class="row ${cfg.motor?'':cfg.ev?'ev':'nomotor'}">`+cfg.cols.map((c,ci)=>`<input class="${ci===2?'sp':''}" id="${key}-${i}-${c[0]}" aria-label="${c[2]} ${i+1}" type="${c[1]}" ${c[1]==='number'?'min="0" step="any" inputmode="decimal"':''} data-l="${key}" data-i="${i}" data-k="${c[0]}" value="${esc(r[c[0]])}" ${c[0]==='setpoint'?'placeholder="—"':''}>`).join('')
+    h+=`<div class="row ${cfg.motor?'':cfg.ev?'ev':'nomotor'}">`+cfg.cols.map((c,ci)=>`<input class="${c[0]==='setpoint'?'sp':c[0]==='qty'?'qty':''}" id="${key}-${i}-${c[0]}" aria-label="${c[2]} ${i+1}" type="${c[1]}" ${c[0]==='qty'?'min="1" step="1" inputmode="numeric" placeholder="1"':c[1]==='number'?'min="0" step="any" inputmode="decimal"':''} data-l="${key}" data-i="${i}" data-k="${c[0]}" value="${esc(r[c[0]])}" ${c[0]==='setpoint'?'placeholder="—"':''}>`).join('')
       +(cfg.motor?`<label class="chk"><input type="checkbox" id="${key}-${i}-motor" data-l="${key}" data-i="${i}" data-k="motor" ${r.motor?'checked':''}><span class="sr">Motor</span></label>`:'')
       +`<button class="x" type="button" aria-label="Remove row ${i+1}" data-rm="${key}" data-i="${i}">×</button></div>`;
   });
@@ -749,7 +761,7 @@ const numOrBlank=v=>{ if(v===''||v==null) return ''; if(typeof v==='number') ret
   else s=s.replace(/,/g,'');                                               // anything else: drop stray commas
   const n=parseFloat(s); return isFinite(n)?n:''; };
 const norm=s=>String(s).toLowerCase().replace(/[^a-z0-9]/g,'');
-const IN_HDR=['ID','Section','Item','Value','Unit','Motor (Yes/No)','Setpoint','Notes'];
+const IN_HDR=['ID','Section','Item','Qty','Value','Unit','Motor (Yes/No)','Setpoint','Notes'];
 const U_POWER=['VA','W','kVA','kW','A'], U_KW=['kW','kVA','VA','W','A'], U_AREA=['ft²','m²'];
 // Fixed fields, keyed by the hidden ID column: [state group, key, kind]
 const FIX={
@@ -779,26 +791,27 @@ function convert(val,unit,kind,warn,where){
 }
 function inputsWS(wb,logo){
   const ws=wb.addWorksheet('Inputs',{views:[{state:'frozen',ySplit:6,showGridLines:false}]});
-  ws.columns=[{width:16,hidden:true},{width:18},{width:42},{width:16},{width:10},{width:15},{width:12},{width:46}];
+  ws.columns=[{width:16,hidden:true},{width:18},{width:42},{width:7},{width:16},{width:10},{width:15},{width:12},{width:46}];
   addLogo(wb,ws,logo,5.6);
   [22,18,18,18].forEach((h,i)=>ws.getRow(i+1).height=h);
   ws.getCell('B1').value='Load calc inputs'; ws.getCell('B1').font={bold:true,size:16};
-  ws.getCell('B2').value='Change any Value, Item name or Unit. Units are converted on upload (A means amps at 240 V; use VA or W for 120 V loads).'; ws.getCell('B2').font={size:10,color:{argb:XC.muted}};
+  ws.getCell('B2').value='Change any Qty, Value, Item name or Unit. Value is per unit. Units are converted on upload (A means amps at 240 V; use VA or W for 120 V loads).'; ws.getCell('B2').font={size:10,color:{argb:XC.muted}};
   ws.getCell('B3').value='To add a load, copy an existing row of the same type and change it. To remove one, delete its row. Then upload this file to the calculator.'; ws.getCell('B3').font={size:10,color:{argb:XC.muted}};
   const H=6;
-  IN_HDR.forEach((h,i)=>{ const cl=ws.getCell(H,i+1); cl.value=h; cl.font={bold:true,color:{argb:XC.ink}}; cl.fill={type:'pattern',pattern:'solid',fgColor:{argb:XC.green}}; cl.border=boxed; cl.alignment={vertical:'middle',horizontal:i===3||i===6?'right':'left'}; });
-  ws.getRow(H).height=20; ws.autoFilter={from:{row:H,column:2},to:{row:H,column:8}};
+  IN_HDR.forEach((h,i)=>{ const cl=ws.getCell(H,i+1); cl.value=h; cl.font={bold:true,color:{argb:XC.ink}}; cl.fill={type:'pattern',pattern:'solid',fgColor:{argb:XC.green}}; cl.border=boxed; cl.alignment={vertical:'middle',horizontal:i===3||i===4||i===7?'right':'left'}; });
+  ws.getRow(H).height=20; ws.autoFilter={from:{row:H,column:2},to:{row:H,column:9}};
   let r=H+1, band=0;
   const put=(id,sec,item,val,unit,opt={})=>{
-    const vals=[id,sec,item,val,unit,opt.motor??'',opt.setpoint??'',opt.note||''];
+    const vals=[id,sec,item,opt.qty??'',val,unit,opt.motor??'',opt.setpoint??'',opt.note||''];
     vals.forEach((v,i)=>{ const cl=ws.getCell(r,i+1); cl.value=(v===''||v==null)?null:v; cl.border=boxed;
-      cl.alignment={vertical:'middle',horizontal:(i===3||i===6)&&typeof v==='number'?'right':(i===4||i===5?'center':'left')};
-      cl.fill={type:'pattern',pattern:'solid',fgColor:{argb:(i===3||i===4||i===6)?XC.pale:(band%2?XC.gray:'FFFFFFFF')}};
-      if(i===0) cl.font={size:8,color:{argb:XC.muted}}; if(i===1) cl.font={color:{argb:XC.muted}}; if(i===3) cl.font={bold:true}; if(i===7) cl.font={size:9,color:{argb:XC.muted}}; });
-    if(opt.fmt){ ws.getCell(r,4).numFmt=opt.fmt; ws.getCell(r,7).numFmt=opt.fmt; }
-    if(opt.list) ws.getCell(r,4).dataValidation={type:'list',allowBlank:true,showErrorMessage:false,formulae:['"'+opt.list.join(',')+'"']};
-    if(opt.units) ws.getCell(r,5).dataValidation={type:'list',allowBlank:true,showErrorMessage:false,formulae:['"'+opt.units.join(',')+'"']};
-    if(opt.motorList) ws.getCell(r,6).dataValidation={type:'list',allowBlank:true,showErrorMessage:false,formulae:['"Yes,No"']};
+      cl.alignment={vertical:'middle',horizontal:(i===3||i===4||i===7)&&typeof v==='number'?'right':(i===5||i===6?'center':'left')};
+      cl.fill={type:'pattern',pattern:'solid',fgColor:{argb:(i===4||i===5||i===7||(i===3&&opt.qty!=null))?XC.pale:(band%2?XC.gray:'FFFFFFFF')}};
+      if(i===0) cl.font={size:8,color:{argb:XC.muted}}; if(i===1) cl.font={color:{argb:XC.muted}}; if(i===4) cl.font={bold:true}; if(i===8) cl.font={size:9,color:{argb:XC.muted}}; });
+    if(opt.qty!=null) ws.getCell(r,4).numFmt='0';
+    if(opt.fmt){ ws.getCell(r,5).numFmt=opt.fmt; ws.getCell(r,8).numFmt=opt.fmt; }
+    if(opt.list) ws.getCell(r,5).dataValidation={type:'list',allowBlank:true,showErrorMessage:false,formulae:['"'+opt.list.join(',')+'"']};
+    if(opt.units) ws.getCell(r,6).dataValidation={type:'list',allowBlank:true,showErrorMessage:false,formulae:['"'+opt.units.join(',')+'"']};
+    if(opt.motorList) ws.getCell(r,7).dataValidation={type:'list',allowBlank:true,showErrorMessage:false,formulae:['"Yes,No"']};
     r++;
   };
   const VA='#,##0', N=v=>numOrBlank(v), h=S.hvac;
@@ -818,11 +831,11 @@ function inputsWS(wb,logo){
   put('hv.units','Heating and cooling','Number of space heaters',N(h.units),'count',{fmt:'0',note:'Space heaters only'});
   put('hv.blower','Heating and cooling','Air handler / blower',N(h.blower),'VA',{fmt:VA,units:U_POWER});
   put('hv.interlock','Heating and cooling','Compressor and supplemental interlocked',h.interlock?'Yes':'No','',{list:['Yes','No'],note:'Heat pump only'});
-  band=3; (S.cooking||[]).forEach(x=>put('cooking','Cooking',x.name||'',N(x.kw),'kW',{fmt:'#,##0.0##',units:U_KW}));
-  band=4; (S.dryers||[]).forEach(x=>put('dryer','Dryer',x.name||'',N(x.va),'VA',{fmt:VA,units:U_POWER}));
-  band=5; (S.appliances||[]).forEach(x=>put('appliance','Appliance',x.name||'',N(x.va),'VA',{fmt:VA,units:U_POWER,motor:x.motor?'Yes':'No',motorList:true}));
-  band=6; (S.evse||[]).forEach(x=>put('ev','EV charger',x.name||'',N(x.va),'VA',{fmt:VA,units:U_POWER,setpoint:N(x.setpoint),note:'Setpoint (same unit) only with listed load management, 120.7'}));
-  band=7; (S.other||[]).forEach(x=>put('other','Other load',x.name||'',N(x.va),'VA',{fmt:VA,units:U_POWER}));
+  band=3; (S.cooking||[]).forEach(x=>put('cooking','Cooking',x.name||'',N(x.kw),'kW',{qty:Math.max(1,parseInt(x.qty)||1),fmt:'#,##0.0##',units:U_KW}));
+  band=4; (S.dryers||[]).forEach(x=>put('dryer','Dryer',x.name||'',N(x.va),'VA',{qty:Math.max(1,parseInt(x.qty)||1),fmt:VA,units:U_POWER}));
+  band=5; (S.appliances||[]).forEach(x=>put('appliance','Appliance',x.name||'',N(x.va),'VA',{qty:Math.max(1,parseInt(x.qty)||1),fmt:VA,units:U_POWER,motor:x.motor?'Yes':'No',motorList:true}));
+  band=6; (S.evse||[]).forEach(x=>put('ev','EV charger',x.name||'',N(x.va),'VA',{qty:Math.max(1,parseInt(x.qty)||1),fmt:VA,units:U_POWER,setpoint:N(x.setpoint),note:'Setpoint (same unit) only with listed load management, 120.7'}));
+  band=7; (S.other||[]).forEach(x=>put('other','Other load',x.name||'',N(x.va),'VA',{qty:Math.max(1,parseInt(x.qty)||1),fmt:VA,units:U_POWER}));
   return ws;
 }
 // Reads the Inputs table by its header names, so columns can be moved. Rows are identified by the hidden ID;
@@ -830,7 +843,7 @@ function inputsWS(wb,logo){
 function parseInputsV2(rows,X,warn=[]){
   const hi=rows.findIndex(rw=>rw&&rw.some(c=>norm(c)==='section')&&rw.some(c=>norm(c)==='value')); if(hi<0) return null;
   const H=rows[hi].map(norm); const col=n=>H.findIndex(h=>h.startsWith(n));
-  const C={id:H.indexOf('id'),sec:col('section'),item:col('item'),val:col('value'),unit:col('unit'),motor:col('motor'),sp:col('setpoint')};
+  const C={id:H.indexOf('id'),sec:col('section'),item:col('item'),qty:col('qty'),val:col('value'),unit:col('unit'),motor:col('motor'),sp:col('setpoint')};
   const b=blank(); const o={...b,job:{...b.job},hvac:{...b.hvac},cooking:[],dryers:[],appliances:[],evse:[],other:[]};
   const g=(rw,k)=>C[k]>=0?rw[C[k]]:'';
   const secOf=s=>{ s=norm(s); if(!s) return null; if(s.startsWith('job')) return 'job'; if(s.startsWith('dwell')) return 'dw'; if(s.startsWith('heat')||s.startsWith('hvac')) return 'hv'; if(s.startsWith('cook')||s.startsWith('rang')||s.startsWith('oven')) return 'cooking'; if(s.startsWith('dry')) return 'dryer'; if(s.startsWith('appl')) return 'appliance'; if(s.startsWith('ev')||s.startsWith('charg')) return 'ev'; if(s.startsWith('other')) return 'other'; return null; };
@@ -854,10 +867,11 @@ function parseInputsV2(rows,X,warn=[]){
       tgt[key]=v; continue; }
     const list=LIST_ID[id], kind=id==='cooking'?'kw':'power';
     const v=convert(val,unit,kind,warn,where); if(v===''&&!item) continue;
-    if(list==='cooking') o.cooking.push({name:item,kw:v});
-    else if(list==='appliances') o.appliances.push({name:item,va:v,motor:yn(g(rw,'motor'))});
-    else if(list==='evse') o.evse.push({name:item,va:v,setpoint:convert(g(rw,'sp'),unit,'power',warn,where+' setpoint')});
-    else o[list].push({name:item,va:v});
+    const q=Math.max(1,parseInt(numOrBlank(g(rw,'qty')))||1);
+    if(list==='cooking') o.cooking.push({name:item,qty:q,kw:v});
+    else if(list==='appliances') o.appliances.push({name:item,qty:q,va:v,motor:yn(g(rw,'motor'))});
+    else if(list==='evse') o.evse.push({name:item,qty:q,va:v,setpoint:convert(g(rw,'sp'),unit,'power',warn,where+' setpoint')});
+    else o[list].push({name:item,qty:q,va:v});
   }
   if(o.sa!==''&&o.sa<2) o.sa=2;
   return o;
