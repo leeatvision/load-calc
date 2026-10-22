@@ -172,6 +172,13 @@ details.job[open] summary{margin-bottom:10px}
 .cval{font-weight:600;white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums;display:flex;gap:6px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
 .tag{font-size:12px;font-weight:600;color:var(--accent-text);background:var(--accent-soft);border-radius:2px;padding:2px 6px}
 .cact{display:flex;gap:8px;justify-content:flex-end}
+.linkbtn:disabled{opacity:.45;cursor:default;text-decoration:none}
+.cconfirm{grid-column:1/-1;background:var(--warn-soft);border:1px solid var(--danger);border-radius:4px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.cconfirm p{margin:0;font-size:14px}
+.cconfirm label.f{max-width:240px}
+.cbtns{display:flex;gap:10px;flex-wrap:wrap}
+.btn.danger{background:var(--danger);border-color:var(--danger);color:#fff}
+.btn.danger:not(:disabled):hover{background:var(--danger);filter:brightness(.92)}
 @media (max-width:520px){.catgrid{grid-template-columns:minmax(0,1fr)}.catlist li{grid-template-columns:minmax(0,1fr) auto}.cact{grid-column:1/-1;justify-content:flex-start}.tab{padding:10px 4px 8px;font-size:14px}}
 </style>
 
@@ -1106,7 +1113,12 @@ function renderCatList(){
     return `<section class="card catgroup"><h2>${CAT_LABEL[c]} <span class="ref">${g.length} item${g.length>1?'s':''} · ${catUnit(c)}</span></h2><ul class="catlist">`
       +g.map(x=>`<li><div class="cmain"><div class="cname">${esc(x.name)}</div><div class="cmeta">${esc([x.notes,x.source?'Source: '+x.source:''].filter(Boolean).join(' · '))}</div></div>
         <div class="cval">${esc(fmtVal(x.category,x.value))}${x.motor?'<span class="tag">Motor</span>':''}${x.setpoint?`<span class="tag">Setpoint ${esc(fmtVal('ev',x.setpoint))}</span>`:''}</div>
-        <div class="cact">${CAT.mode==='live'?`<button type="button" class="linkbtn" data-catedit="${esc(x.id)}">Edit</button><button type="button" class="linkbtn danger" data-catrm="${esc(x.id)}">${catArmed===String(x.id)?'Tap to confirm':'Remove'}</button>`:''}</div></li>`).join('')
+        <div class="cact">${CAT.mode==='live'?`<button type="button" class="linkbtn" data-catedit="${esc(x.id)}">Edit</button><button type="button" class="linkbtn danger" data-catrm="${esc(x.id)}"${catArmed===String(x.id)?' disabled':''}>Remove</button>`:''}</div>
+        ${catArmed===String(x.id)?`<div class="cconfirm" role="alertdialog" aria-label="Confirm removal">
+          <p>Remove <b>${esc(x.name)}</b> from the shared catalogue? It disappears for everyone on the team.</p>
+          ${lsGet(PASS_KEY)?'':`<label class="f">Team passcode<input id="rm-pass" type="password" inputmode="numeric" autocomplete="off"></label>`}
+          <div class="cbtns"><button type="button" class="btn danger" data-catrmyes="${esc(x.id)}">Yes, remove</button><button type="button" class="btn ghost" data-catrmno="1">Cancel</button></div>
+          <p class="catmsg bad" id="rmMsg"></p></div>`:''}</li>`).join('')
       +`</ul></section>`; }).join('');
   const box=$('catList'); if(box) box.innerHTML=groups||'<p class="hint">No items match.</p>';
 }
@@ -1128,13 +1140,15 @@ document.addEventListener('click',async e=>{
   if(b.id==='catLock'){ lsSet(PASS_KEY,null); renderCatalog(true); return; }
   if(b.id==='catCancel'){ const back=catReturn&&!(catEdit&&catEdit.id); catEdit=null; if(back){ const r=catReturn; catReturn=null; setView('calc'); const n=$(r.key+'-'+r.i+'-name'); n&&n.scrollIntoView({block:'center'}); } else renderCatalog(); return; }
   if(b.dataset.catedit){ const x=CAT.items.find(it=>String(it.id)===b.dataset.catedit); if(x){ catEdit={...x}; catReturn=null; renderCatalog(); $('catForm').scrollIntoView({behavior:'smooth',block:'start'}); } return; }
-  if(b.dataset.catrm){ const id=b.dataset.catrm;
-    if(catArmed!==id){ catArmed=id; renderCatList(); setTimeout(()=>{ if(catArmed===id){ catArmed=null; if(view==='catalog') renderCatList(); } },3000); return; }
-    catArmed=null; const pass=lsGet(PASS_KEY);
-    if(!pass){ renderCatList(); catMsg('Enter the team passcode in the form above and add or save once to unlock editing, then remove the item.',true); $('catForm').scrollIntoView({behavior:'smooth'}); return; }
-    if(String(id).startsWith('b')){ catMsg('Reconnect to remove items.',true); return; }
-    try{ await rpc('loadcalc_item_remove',{p_passcode:pass,p_id:id}); await loadCatalog(); catMsg('Item removed.'); }
-    catch(err){ if(/passcode/i.test(err.message)) lsSet(PASS_KEY,null); renderCatalog(true); catMsg(err.message,true); }
+  if(b.dataset.catrm){ catArmed=b.dataset.catrm; renderCatList(); const yes=document.querySelector('[data-catrmyes]'); const p=$('rm-pass'); (p||yes)&&(p||yes).focus(); return; }
+  if(b.dataset.catrmno){ catArmed=null; renderCatList(); return; }
+  if(b.dataset.catrmyes){ const id=b.dataset.catrmyes, rm=$('rmMsg'), name=(CAT.items.find(it=>String(it.id)===id)||{}).name||'Item';
+    const pass=lsGet(PASS_KEY)||($('rm-pass')&&$('rm-pass').value.trim());
+    if(!pass){ rm.textContent='Enter the team passcode.'; $('rm-pass')&&$('rm-pass').focus(); return; }
+    if(String(id).startsWith('b')){ rm.textContent='Reconnect to remove items.'; return; }
+    b.disabled=true; rm.textContent='';
+    try{ await rpc('loadcalc_item_remove',{p_passcode:pass,p_id:id}); lsSet(PASS_KEY,pass); catArmed=null; await loadCatalog(); catMsg('Removed "'+name+'".'); }
+    catch(err){ b.disabled=false; if(/passcode/i.test(err.message)){ lsSet(PASS_KEY,null); renderCatList(); const m=$('rmMsg'); m&&(m.textContent=err.message); const p=$('rm-pass'); p&&p.focus(); } else rm.textContent=err.message; }
     return; }
   if(b.id==='catSave'){
     const category=$('cat-category').value, name=$('cat-name').value.trim(), value=numOrBlank($('cat-value').value), sp=category==='ev'?numOrBlank($('cat-setpoint').value):'';
