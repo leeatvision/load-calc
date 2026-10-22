@@ -1013,6 +1013,7 @@ async function rpc(fn,args){
   const r=await fetch(SB_URL+'/rest/v1/rpc/'+fn,{method:'POST',headers:{apikey:SB_KEY,'Content-Type':'application/json'},body:JSON.stringify(args)});
   const txt=await r.text(); let j=null; try{j=txt?JSON.parse(txt):null}catch(e){}
   if(!r.ok) throw new Error((j&&j.message)||('The catalogue could not be saved (error '+r.status+').'));
+  if(j&&j.ok===false) throw new Error(j.error||'The catalogue could not be saved.');
   return j;
 }
 
@@ -1132,7 +1133,7 @@ document.addEventListener('click',async e=>{
     catArmed=null; const pass=lsGet(PASS_KEY);
     if(!pass){ renderCatList(); catMsg('Enter the team passcode in the form above and add or save once to unlock editing, then remove the item.',true); $('catForm').scrollIntoView({behavior:'smooth'}); return; }
     if(String(id).startsWith('b')){ catMsg('Reconnect to remove items.',true); return; }
-    try{ await rpc('loadcalc_catalog_remove',{p_passcode:pass,p_id:id}); await loadCatalog(); catMsg('Item removed.'); }
+    try{ await rpc('loadcalc_item_remove',{p_passcode:pass,p_id:id}); await loadCatalog(); catMsg('Item removed.'); }
     catch(err){ if(/passcode/i.test(err.message)) lsSet(PASS_KEY,null); renderCatalog(true); catMsg(err.message,true); }
     return; }
   if(b.id==='catSave'){
@@ -1145,7 +1146,7 @@ document.addEventListener('click',async e=>{
     const item={id:catEdit&&catEdit.id&&!String(catEdit.id).startsWith('b')?catEdit.id:'',category,name,value,motor:category==='appliance'&&$('cat-motor').checked,setpoint:sp===''?'':sp,notes:$('cat-notes').value,source:$('cat-source').value};
     b.disabled=true; catMsg('Saving…');
     try{
-      const saved=await rpc('loadcalc_catalog_save',{p_passcode:pass,p_item:item});
+      const saved=(await rpc('loadcalc_item_save',{p_passcode:pass,p_item:item})).item;
       lsSet(PASS_KEY,pass); catEdit=null; const r=catReturn; catReturn=null; await loadCatalog(false);
       if(r&&saved){ setView('calc'); applyItem(r.key,r.i,saved); const n=$(r.key+'-'+r.i+'-name'); n&&n.scrollIntoView({block:'center'}); $('status').textContent='Added "'+saved.name+'" to the catalogue and filled it in.'; }
       else { renderCatalog(); catMsg(item.id?'Changes saved.':'Added "'+name+'" to the catalogue.'); }
