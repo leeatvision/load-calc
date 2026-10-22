@@ -1037,7 +1037,8 @@ function openPick(inp){
 function closePick(){ pick.hidden=true; pickFor=null; }
 pick.addEventListener('pointerdown',e=>e.preventDefault());
 document.addEventListener('focusin',e=>{ const t=e.target; if(t.dataset&&t.dataset.pick) openPick(t); else if(!pick.contains(t)) closePick(); });
-document.addEventListener('input',e=>{ const t=e.target; if(t.dataset&&t.dataset.pick&&pickFor) openPick(t); });
+document.addEventListener('input',e=>{ const t=e.target; if(t.dataset&&t.dataset.pick) openPick(t); });
+document.addEventListener('click',e=>{ const t=e.target; if(t.dataset&&t.dataset.pick&&pick.hidden) openPick(t); });
 document.addEventListener('pointerdown',e=>{ if(!pick.hidden&&!pick.contains(e.target)&&!(e.target.dataset&&e.target.dataset.pick)) closePick(); });
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!pick.hidden) closePick(); });
 window.addEventListener('resize',()=>{ if(pickFor&&pickFor.inp.isConnected) openPick(pickFor.inp); else closePick(); });
