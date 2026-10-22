@@ -1078,7 +1078,7 @@ function catForm(){
     <div class="catgrid">
       <label class="f">Category<select id="cat-category">${CAT_ORDER.map(c=>`<option value="${c}"${c===e.category?' selected':''}>${CAT_LABEL[c]}</option>`).join('')}</select></label>
       <label class="f wide">Item name<input id="cat-name" type="text" maxlength="80" autocomplete="off" value="${esc(e.name)}" placeholder="e.g. Pool pump, 3 hp (240 V)"></label>
-      <label class="f">Nameplate rating (<span id="cat-unit">${catUnit(e.category)}</span>)<input id="cat-value" type="text" inputmode="decimal" value="${esc(e.value)}" placeholder="${e.category==='cooking'?'e.g. 12.1':'e.g. 4500'}"></label>
+      <label class="f"><span>Nameplate rating (<span id="cat-unit">${catUnit(e.category)}</span>)</span><input id="cat-value" type="text" inputmode="decimal" value="${esc(e.value)}" placeholder="${e.category==='cooking'?'e.g. 12.1':'e.g. 4500'}"></label>
       <label class="f" id="cat-sp-wrap"${e.category==='ev'?'':' hidden'}>Load-managed setpoint (VA, optional)<input id="cat-setpoint" type="text" inputmode="decimal" value="${esc(e.setpoint??'')}" placeholder="Only with listed load management"></label>
       <label class="chk" id="cat-motor-wrap"${e.category==='appliance'?'':' hidden'}><input type="checkbox" id="cat-motor"${e.motor?' checked':''}> Motor load (for the 25% largest-motor rule)</label>
       <label class="f wide">Notes (optional)<input id="cat-notes" type="text" maxlength="300" value="${esc(e.notes||'')}" placeholder="e.g. 10 A at 240 V"></label>
