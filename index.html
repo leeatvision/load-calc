@@ -18,7 +18,7 @@
 :root{
   --bg:#FAFAFA; --surface:#FFFFFF; --sunk:#F4F4F4; --ink:#1E1E1E; --muted:#606060; --line:#E0E0E0; --field:#BDBDBD;
   --accent:#78B83F; --accent-hover:#5E9430; --accent-ink:#1E1E1E; --accent-text:#47721F; --accent-soft:#EDF5E1;
-  --warn:#8A5A00; --warn-soft:#FDF3E0;
+  --warn:#8A5A00; --warn-soft:#FDF3E0; --danger:#B03A3A;
   --t1:#F4F4F4; --t2:#F2F9EA; --t3:#FDF3E0; --t4:#EBEBEB; --t5:#E2F2CE; --t6:#F4F4F4; --t7:#EDF5E1; --t8:#FAFAFA;
   --f-display:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   --f-body:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
@@ -27,11 +27,11 @@
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#1A1A1A; --surface:#232323; --sunk:#1E1E1E; --ink:#F4F4F4; --muted:#A0A0A0; --line:#3D3D3D; --field:#5A5A5A;
   --accent:#8DC44D; --accent-hover:#A0D166; --accent-ink:#111111; --accent-text:#A0D166; --accent-soft:#22301A;
-  --t1:#262626; --t2:#1F2A17; --t3:#2B2414; --t4:#2C2C2C; --t5:#24331A; --t6:#262626; --t7:#1C2614; --t8:#212121; --warn:#E8A020; --warn-soft:#2E2410; color-scheme:dark}}
+  --t1:#262626; --t2:#1F2A17; --t3:#2B2414; --t4:#2C2C2C; --t5:#24331A; --t6:#262626; --t7:#1C2614; --t8:#212121; --danger:#F08A8A; --warn:#E8A020; --warn-soft:#2E2410; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#1A1A1A; --surface:#232323; --sunk:#1E1E1E; --ink:#F4F4F4; --muted:#A0A0A0; --line:#3D3D3D; --field:#5A5A5A;
   --accent:#8DC44D; --accent-hover:#A0D166; --accent-ink:#111111; --accent-text:#A0D166; --accent-soft:#22301A;
-  --t1:#262626; --t2:#1F2A17; --t3:#2B2414; --t4:#2C2C2C; --t5:#24331A; --t6:#262626; --t7:#1C2614; --t8:#212121; --warn:#E8A020; --warn-soft:#2E2410; color-scheme:dark}
+  --t1:#262626; --t2:#1F2A17; --t3:#2B2414; --t4:#2C2C2C; --t5:#24331A; --t6:#262626; --t7:#1C2614; --t8:#212121; --danger:#F08A8A; --warn:#E8A020; --warn-soft:#2E2410; color-scheme:dark}
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 button,select,summary,label.chk{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
@@ -135,6 +135,44 @@ details.job[open] summary{margin-bottom:10px}
 .mbar a,.mbar .mlink{color:inherit;font-size:14px;font-family:var(--f-body)}
 .mbar .mlink{appearance:none;background:none;border:0;padding:8px 0;font-weight:600;text-decoration:underline;cursor:pointer}}
 @media (prefers-reduced-motion:no-preference){.plate .svc{transition:opacity .15s}}
+.mbar.off{display:none!important}
+/* catalogue dropdown on load rows */
+.pick{position:absolute;z-index:30;background:var(--surface);border:1px solid var(--field);border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,.16);max-height:320px;overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column}
+.pick[hidden]{display:none!important}
+.pick .opt{appearance:none;border:0;border-bottom:1px solid var(--line);background:none;text-align:left;padding:10px 12px;font:inherit;color:var(--ink);cursor:pointer;display:flex;justify-content:space-between;gap:12px;align-items:baseline;min-height:44px}
+.pick .opt:hover,.pick .opt:focus-visible{background:var(--accent-soft)}
+.pick .on{font-size:15px;min-width:0}
+.pick .ov{font-size:13px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.pick .pempty{padding:12px;font-size:14px;color:var(--muted)}
+.pick .padd{appearance:none;position:sticky;bottom:0;margin-top:auto;border:0;border-top:1px solid var(--line);background:var(--accent);color:var(--accent-ink);font:inherit;font-weight:700;font-size:15px;padding:12px;min-height:46px;cursor:pointer;text-align:center}
+.pick .padd:hover{background:var(--accent-hover)}
+/* Item catalogue tab */
+.catview{display:flex;flex-direction:column;gap:14px;max-width:900px}
+.catview[hidden]{display:none!important}
+.catintro{margin:0}
+.catwarn{margin:0}
+.catform{background:var(--t5)}
+.catgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 12px;margin-top:10px}
+.catgrid .wide{grid-column:1/-1}
+.catgrid .chk{align-self:end;padding-bottom:10px}
+.catbtns{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:14px}
+.catlock{font-size:13px;color:var(--muted)}
+.catmsg{margin:10px 0 0;font-size:14px;color:var(--accent-text);min-height:1.2em}
+.catmsg.bad{color:var(--danger,#B03A3A)}
+.catmsg:empty{display:none}
+.linkbtn{appearance:none;background:none;border:0;padding:6px 4px;font:inherit;font-size:14px;font-weight:600;color:var(--accent-text);cursor:pointer;text-decoration:underline}
+.linkbtn.danger{color:var(--danger,#B03A3A)}
+.catsearch input{max-width:420px}
+.catgroup{padding-bottom:6px}
+.catlist{list-style:none;margin:8px 0 0;padding:0}
+.catlist li{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:6px 16px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.cname{font-weight:600}
+.cmeta{font-size:13px;color:var(--muted);margin-top:2px}
+.cmeta:empty{display:none}
+.cval{font-weight:600;white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums;display:flex;gap:6px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+.tag{font-size:12px;font-weight:600;color:var(--accent-text);background:var(--accent-soft);border-radius:2px;padding:2px 6px}
+.cact{display:flex;gap:8px;justify-content:flex-end}
+@media (max-width:520px){.catgrid{grid-template-columns:minmax(0,1fr)}.catlist li{grid-template-columns:minmax(0,1fr) auto}.cact{grid-column:1/-1;justify-content:flex-start}.tab{padding:10px 4px 8px;font-size:14px}}
 </style>
 
 <div class="wrap">
@@ -158,9 +196,10 @@ details.job[open] summary{margin-bottom:10px}
   </div>
   <div class="status" id="status" role="status"></div>
 
-  <nav class="tabs" role="tablist" aria-label="Calculation method">
+  <nav class="tabs" role="tablist" aria-label="Calculation method and item catalogue">
     <button class="tab" role="tab" id="tab-optional" aria-selected="true" data-m="optional">Optional method<small>120.82</small></button>
     <button class="tab" role="tab" id="tab-standard" aria-selected="false" data-m="standard">Standard method<small>Part III</small></button>
+    <button class="tab" role="tab" id="tab-catalog" aria-selected="false" data-view="catalog">Item catalogue<small>shared</small></button>
   </nav>
 
   <div class="grid">
@@ -223,6 +262,8 @@ details.job[open] summary{margin-bottom:10px}
 
     <aside class="result" id="result" aria-live="polite"></aside>
   </div>
+
+  <div id="catalogView" class="catview" hidden></div>
 
   <p class="foot">Built to the 2026 NEC, Article 120, which the Colorado State Electrical Board made effective August 1, 2026. Section numbers and factors should be confirmed against the adopted code book and any local amendments before a calculation is submitted. Conductor sizes shown are typical copper/aluminum for a whole-dwelling service at 83% of rating (310.12) with 75 °C terminations; check terminations, conditions of use, and the utility's requirements. A licensed electrician reviews and signs every calculation.</p>
 </div>
@@ -464,7 +505,7 @@ function renderList(key){
     h+=`<div class="row ${cfg.motor?'':cfg.ev?'ev':'nomotor'} rowhead">`+cfg.cols.map(c=>`<span>${c[2]}</span>`).join('')+(cfg.motor?'<span style="text-align:center">Motor</span>':'')+'<span></span></div>';
   }
   arr.forEach((r,i)=>{
-    h+=`<div class="row ${cfg.motor?'':cfg.ev?'ev':'nomotor'}">`+cfg.cols.map((c,ci)=>`<input class="${c[0]==='setpoint'?'sp':c[0]==='qty'?'qty':''}" id="${key}-${i}-${c[0]}" aria-label="${c[2]} ${i+1}" type="${c[1]}" ${c[0]==='qty'?'min="1" step="1" inputmode="numeric" placeholder="1"':c[1]==='number'?'min="0" step="any" inputmode="decimal"':''} data-l="${key}" data-i="${i}" data-k="${c[0]}" value="${esc(r[c[0]])}" ${c[0]==='setpoint'?'placeholder="—"':''}>`).join('')
+    h+=`<div class="row ${cfg.motor?'':cfg.ev?'ev':'nomotor'}">`+cfg.cols.map((c,ci)=>`<input class="${c[0]==='setpoint'?'sp':c[0]==='qty'?'qty':''}" id="${key}-${i}-${c[0]}" aria-label="${c[2]} ${i+1}" type="${c[1]}" ${c[0]==='qty'?'min="1" step="1" inputmode="numeric" placeholder="1"':c[1]==='number'?'min="0" step="any" inputmode="decimal"':''} data-l="${key}" data-i="${i}" data-k="${c[0]}" value="${esc(r[c[0]])}" ${c[0]==='name'?`data-pick="${key}" autocomplete="off" placeholder="Pick or type"`:''} ${c[0]==='setpoint'?'placeholder="—"':''}>`).join('')
       +(cfg.motor?`<label class="chk"><input type="checkbox" id="${key}-${i}-motor" data-l="${key}" data-i="${i}" data-k="motor" ${r.motor?'checked':''}><span class="sr">Motor</span></label>`:'')
       +`<button class="x" type="button" aria-label="Remove row ${i+1}" data-rm="${key}" data-i="${i}">×</button></div>`;
   });
@@ -543,7 +584,7 @@ document.addEventListener('click',e=>{
   const b=e.target.closest('button,summary'); if(!b) return;
   if(b.dataset.jump){ $(b.dataset.jump).scrollIntoView({behavior:'smooth',block:'start'}); return; }
   if(b.hasAttribute('data-cleardate')){ const d=$('job-date'); d.value=''; S.job.date=''; touched(); renderResult(); return; }
-  if(b.dataset.m){S.method=b.dataset.m; save(); renderMethodText(); renderResult(); return;}
+  if(b.dataset.m){S.method=b.dataset.m; save(); if(view!=='calc') setView('calc'); renderMethodText(); renderResult(); return;}
   if(b.dataset.switch){S.method=b.dataset.switch; save(); renderMethodText(); renderResult(); window.scrollTo({top:0,behavior:'smooth'}); return;}
   if(b.dataset.addl){S[b.dataset.addl].push({...LISTS[b.dataset.addl].blank}); touched(); renderList(b.dataset.addl); renderResult(); const ins=$('list-'+b.dataset.addl).querySelectorAll('input[type=text]'); ins[ins.length-1]?.focus(); return;}
   if(b.dataset.rm){S[b.dataset.rm].splice(+b.dataset.i,1); touched(); renderList(b.dataset.rm); renderResult(); return;}
@@ -929,6 +970,189 @@ $('fileIn').addEventListener('change',async e=>{
   }catch(err){ st.textContent='Could not read '+f.name+': '+(err&&err.message||err); }
 });
 function fmtDate(v){const p=String(v).split('-'); return p.length===3?`${+p[1]}/${+p[2]}/${p[0]}`:v;}
+// ---------- Shared item catalogue ----------
+// Read from the VES Database table loadcalc_catalog (public read). Adds, edits and removals go
+// through passcode-checked database functions. If the database can't be reached, the last copy
+// this device saw (or the built-in list below) is used and editing is turned off.
+const SB_URL='https://bzhgzxctgeiyznjsxube.supabase.co';
+const SB_KEY='sb_publishable_vgylcs9adJzbjWVZVSv8hA_aYEio-RW';
+const CAT_KEY='vision-loadcalc-catalog', PASS_KEY='vision-loadcalc-pass';
+const CAT_LABEL={cooking:'Cooking',dryer:'Clothes dryer',appliance:'Fastened-in-place appliance',ev:'EV charger',other:'Other load'};
+const CAT_ORDER=['cooking','dryer','appliance','ev','other'];
+const LIST_CAT={cooking:'cooking',dryers:'dryer',appliances:'appliance',evse:'ev',other:'other'};
+const CAT_LIST={cooking:'cooking',dryer:'dryers',appliance:'appliances',ev:'evse',other:'other'};
+const catUnit=c=>c==='cooking'?'kW':'VA';
+const BUILTIN=[
+ ['cooking','Electric range, 30 in freestanding',12.1],['cooking','Induction cooktop, 30 in',7.4],['cooking','Induction cooktop, 36 in',12],['cooking','Single wall oven, 30 in',4.2],['cooking','Double wall oven, 30 in',8.9],
+ ['dryer','Electric dryer, standard',5600],
+ ['appliance','Water heater, electric tank 40 to 50 gal',4500],['appliance','Heat pump water heater',4500],['appliance','Tankless water heater, whole house',27000],['appliance','Dishwasher',1500],
+ ['appliance','Garbage disposal, 1/2 hp',1176,1],['appliance','Garbage disposal, 3/4 hp',1656,1],['appliance','Built-in microwave',1500],['appliance','Built-in refrigerator',800],
+ ['appliance','Garage door opener, 1/2 hp',1176,1],['appliance','Sump pump, 1/3 hp',864,1],['appliance','Well pump, 1 hp (240 V)',1920,1],['appliance','Well pump, 1.5 hp (240 V)',2400,1],
+ ['appliance','Pool pump, 1.5 hp (240 V)',2400,1],['appliance','Pool pump, 2 hp (240 V)',2880,1],['appliance','Hot tub / spa',9600],
+ ['ev','Level 2 charger, 48 A',11520],['ev','Level 2 charger, 40 A',9600],['ev','Level 2 charger, 32 A',7680],['ev','Level 1 charger, 12 A (120 V)',1440],['ev','Level 2 charger, 48 A, load-managed to 32 A',11520,0,7680],
+ ['other','Sauna heater, 6 kW',6000],['other','Sauna heater, 9 kW',9000],['other','Infrared sauna, 120 V',1800],['other','Steam shower generator, 7 kW',7000],['other','Electric spa / pool heater, 11 kW',11000],['other','Air compressor, 2 hp (240 V)',2880]
+].map(([category,name,value,motor,setpoint],i)=>({id:'b'+i,category,name,value,motor:!!motor,setpoint:setpoint||null,notes:'',source:'',builtin:true,sort:i}));
+const CAT={items:BUILTIN,mode:'builtin',msg:''};
+let view='calc', catEdit=null, catReturn=null, catQuery='', catArmed=null;
+const lsGet=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
+const lsSet=(k,v)=>{try{v==null?localStorage.removeItem(k):localStorage.setItem(k,v)}catch(e){}};
+try{ const c=JSON.parse(lsGet(CAT_KEY)||'null'); if(c&&Array.isArray(c.items)&&c.items.length){ CAT.items=c.items; CAT.mode='cached'; } }catch(e){}
+const fmtVal=(cat,v)=>{ const n=Number(v); if(!isFinite(n)) return ''; return cat==='cooking'?(Math.round(n*100)/100)+' kW':Math.round(n).toLocaleString('en-US')+' VA'; };
+const sortItems=a=>a.slice().sort((x,y)=>CAT_ORDER.indexOf(x.category)-CAT_ORDER.indexOf(y.category)||(x.sort??1000)-(y.sort??1000)||String(x.name).localeCompare(String(y.name)));
+
+async function loadCatalog(keep=true){
+  try{
+    const r=await fetch(SB_URL+'/rest/v1/loadcalc_catalog?select=id,category,name,value,motor,setpoint,notes,source,builtin,sort',{headers:{apikey:SB_KEY}});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const items=await r.json(); if(!Array.isArray(items)) throw new Error('Unexpected reply');
+    CAT.items=sortItems(items); CAT.mode='live'; CAT.msg=''; lsSet(CAT_KEY,JSON.stringify({items:CAT.items,at:Date.now()}));
+  }catch(e){ CAT.msg='The shared catalogue could not be reached, so '+(CAT.mode==='cached'?'the copy saved on this device':'the built-in list')+' is shown. Adding and editing need a connection.'; }
+  if(view==='catalog') renderCatalog(keep);
+}
+async function rpc(fn,args){
+  const r=await fetch(SB_URL+'/rest/v1/rpc/'+fn,{method:'POST',headers:{apikey:SB_KEY,'Content-Type':'application/json'},body:JSON.stringify(args)});
+  const txt=await r.text(); let j=null; try{j=txt?JSON.parse(txt):null}catch(e){}
+  if(!r.ok) throw new Error((j&&j.message)||('The catalogue could not be saved (error '+r.status+').'));
+  return j;
+}
+
+// ----- dropdown on each load row's name box -----
+const pick=document.createElement('div'); pick.id='pick'; pick.className='pick'; pick.hidden=true; pick.setAttribute('role','listbox'); document.body.appendChild(pick);
+let pickFor=null;
+function openPick(inp){
+  pickFor={key:inp.dataset.pick,i:+inp.dataset.i,inp};
+  const cat=LIST_CAT[pickFor.key], q=norm(inp.value);
+  let items=CAT.items.filter(x=>x.category===cat);
+  const exact=items.some(x=>norm(x.name)===q);
+  if(q&&!exact) items=items.filter(x=>norm(x.name).includes(q));
+  pick.innerHTML=(items.length?items.map(x=>`<button type="button" class="opt" role="option" data-pickid="${esc(x.id)}"><span class="on">${esc(x.name)}</span><span class="ov">${esc(fmtVal(x.category,x.value))}${x.motor?' · motor':''}${x.setpoint?' · setpoint '+esc(fmtVal('ev',x.setpoint)):''}</span></button>`).join('')
+      :`<div class="pempty">No catalogue match. Keep typing your own, or add it below.</div>`)
+    +`<button type="button" class="padd" data-pickadd="1">+ Add item to catalogue</button>`;
+  const r=inp.getBoundingClientRect(), rowR=inp.closest('.row').getBoundingClientRect();
+  const w=Math.min(Math.max(rowR.width,260),document.documentElement.clientWidth-16);
+  let left=Math.max(8,Math.min(rowR.left,document.documentElement.clientWidth-w-8));
+  pick.style.width=w+'px'; pick.style.left=(left+window.scrollX)+'px'; pick.style.top=(r.bottom+window.scrollY+4)+'px';
+  pick.hidden=false;
+}
+function closePick(){ pick.hidden=true; pickFor=null; }
+pick.addEventListener('pointerdown',e=>e.preventDefault());
+document.addEventListener('focusin',e=>{ const t=e.target; if(t.dataset&&t.dataset.pick) openPick(t); else if(!pick.contains(t)) closePick(); });
+document.addEventListener('input',e=>{ const t=e.target; if(t.dataset&&t.dataset.pick&&pickFor) openPick(t); });
+document.addEventListener('pointerdown',e=>{ if(!pick.hidden&&!pick.contains(e.target)&&!(e.target.dataset&&e.target.dataset.pick)) closePick(); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!pick.hidden) closePick(); });
+window.addEventListener('resize',()=>{ if(pickFor&&pickFor.inp.isConnected) openPick(pickFor.inp); else closePick(); });
+function applyItem(key,i,x){
+  const row=S[key][i]; if(!row) return;
+  row.name=x.name;
+  if(key==='cooking') row.kw=Number(x.value); else row.va=Math.round(Number(x.value));
+  if(key==='appliances') row.motor=!!x.motor;
+  if(key==='evse') row.setpoint=x.setpoint?Math.round(Number(x.setpoint)):'';
+  touched(); renderList(key); renderResult();
+}
+pick.addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b||!pickFor) return;
+  const {key,i,inp}=pickFor;
+  if(b.dataset.pickid){ const x=CAT.items.find(it=>String(it.id)===b.dataset.pickid); closePick(); if(x){ applyItem(key,i,x); const q=$(key+'-'+i+'-qty'); q&&q.focus(); } return; }
+  if(b.dataset.pickadd){ const typed=inp.value.trim(); closePick(); catReturn={key,i};
+    catEdit={id:'',category:LIST_CAT[key],name:CAT.items.some(x=>norm(x.name)===norm(typed))?'':typed,value:'',motor:false,setpoint:'',notes:'',source:''};
+    setView('catalog'); setTimeout(()=>{ const n=$(catEdit.name?'cat-value':'cat-name'); n&&n.focus(); },50); }
+});
+
+// ----- view switching (calculator tabs vs Item catalogue) -----
+function setView(v){
+  view=v; closePick();
+  document.querySelector('.grid').hidden=v==='catalog'; $('catalogView').hidden=v!=='catalog'; $('mbar').classList.toggle('off',v==='catalog');
+  document.querySelectorAll('.tab').forEach(b=>b.setAttribute('aria-selected',String(v==='catalog'?b.dataset.view==='catalog':b.dataset.m===S.method)));
+  if(v==='catalog'){ renderCatalog(); window.scrollTo({top:document.querySelector('.tabs').offsetTop-8}); }
+}
+
+// ----- Item catalogue tab -----
+function catForm(){
+  const e=catEdit||{id:'',category:'appliance',name:'',value:'',motor:false,setpoint:'',notes:'',source:''};
+  const unlocked=!!lsGet(PASS_KEY), live=CAT.mode==='live';
+  return `<section class="card catform" id="catForm">
+    <h2>${e.id?'Edit item':'Add an item'}</h2>
+    ${catReturn?`<p class="hint">After saving, the item is filled into the ${esc(CAT_LABEL[LIST_CAT[catReturn.key]].toLowerCase())} row you came from.</p>`:''}
+    <div class="catgrid">
+      <label class="f">Category<select id="cat-category">${CAT_ORDER.map(c=>`<option value="${c}"${c===e.category?' selected':''}>${CAT_LABEL[c]}</option>`).join('')}</select></label>
+      <label class="f wide">Item name<input id="cat-name" type="text" maxlength="80" autocomplete="off" value="${esc(e.name)}" placeholder="e.g. Pool pump, 3 hp (240 V)"></label>
+      <label class="f">Nameplate rating (<span id="cat-unit">${catUnit(e.category)}</span>)<input id="cat-value" type="text" inputmode="decimal" value="${esc(e.value)}" placeholder="${e.category==='cooking'?'e.g. 12.1':'e.g. 4500'}"></label>
+      <label class="f" id="cat-sp-wrap"${e.category==='ev'?'':' hidden'}>Load-managed setpoint (VA, optional)<input id="cat-setpoint" type="text" inputmode="decimal" value="${esc(e.setpoint??'')}" placeholder="Only with listed load management"></label>
+      <label class="chk" id="cat-motor-wrap"${e.category==='appliance'?'':' hidden'}><input type="checkbox" id="cat-motor"${e.motor?' checked':''}> Motor load (for the 25% largest-motor rule)</label>
+      <label class="f wide">Notes (optional)<input id="cat-notes" type="text" maxlength="300" value="${esc(e.notes||'')}" placeholder="e.g. 10 A at 240 V"></label>
+      <label class="f wide">Source (optional)<input id="cat-source" type="text" maxlength="300" value="${esc(e.source||'')}" placeholder="e.g. Pentair spec sheet"></label>
+      ${unlocked?'':`<label class="f wide">Team passcode<input id="cat-pass" type="password" autocomplete="off" placeholder="Needed once on this device"></label>`}
+    </div>
+    <div class="catbtns">
+      <button class="btn" type="button" id="catSave"${live?'':' disabled'}>${e.id?'Save changes':'Add to catalogue'}</button>
+      ${(e.id||catReturn)?`<button class="btn ghost" type="button" id="catCancel">${catReturn&&!e.id?'Back to calculator':'Cancel'}</button>`:''}
+      ${unlocked?`<span class="catlock">Editing unlocked on this device · <button type="button" class="linkbtn" id="catLock">Lock</button></span>`:''}
+    </div>
+    <p class="catmsg" id="catMsg" role="status"></p>
+  </section>`;
+}
+function grabForm(){
+  if(!$('cat-category')) return catEdit;
+  const c=$('cat-category').value;
+  return {id:catEdit&&catEdit.id||'',category:c,name:$('cat-name').value,value:$('cat-value').value,motor:c==='appliance'&&$('cat-motor').checked,
+    setpoint:c==='ev'?$('cat-setpoint').value:'',notes:$('cat-notes').value,source:$('cat-source').value};
+}
+function renderCatList(){
+  const q=norm(catQuery);
+  const items=CAT.items.filter(x=>!q||norm(x.name).includes(q)||norm(x.notes||'').includes(q));
+  const groups=CAT_ORDER.map(c=>{ const g=items.filter(x=>x.category===c); if(!g.length) return '';
+    return `<section class="card catgroup"><h2>${CAT_LABEL[c]} <span class="ref">${g.length} item${g.length>1?'s':''} · ${catUnit(c)}</span></h2><ul class="catlist">`
+      +g.map(x=>`<li><div class="cmain"><div class="cname">${esc(x.name)}</div><div class="cmeta">${esc([x.notes,x.source?'Source: '+x.source:''].filter(Boolean).join(' · '))}</div></div>
+        <div class="cval">${esc(fmtVal(x.category,x.value))}${x.motor?'<span class="tag">Motor</span>':''}${x.setpoint?`<span class="tag">Setpoint ${esc(fmtVal('ev',x.setpoint))}</span>`:''}</div>
+        <div class="cact">${CAT.mode==='live'?`<button type="button" class="linkbtn" data-catedit="${esc(x.id)}">Edit</button><button type="button" class="linkbtn danger" data-catrm="${esc(x.id)}">${catArmed===String(x.id)?'Tap to confirm':'Remove'}</button>`:''}</div></li>`).join('')
+      +`</ul></section>`; }).join('');
+  const box=$('catList'); if(box) box.innerHTML=groups||'<p class="hint">No items match.</p>';
+}
+function renderCatalog(keepForm){
+  if(keepForm) catEdit=grabForm();
+  $('catalogView').innerHTML=`<p class="hint catintro">Shared with the whole team. Pick these from the name box on any load row to fill in its rating. Values are typical nameplate ratings; always check the actual nameplate. Anyone can use the catalogue; adding, editing or removing items needs the team passcode.</p>
+    ${CAT.msg?`<div class="warnbox catwarn"><p>${esc(CAT.msg)}</p></div>`:''}
+    ${catForm()}
+    <div class="catsearch"><input id="cat-q" type="search" placeholder="Search the catalogue" value="${esc(catQuery)}" autocomplete="off"></div>
+    <div id="catList"></div>`;
+  renderCatList();
+}
+function catMsg(t,bad){ const m=$('catMsg'); if(m){ m.textContent=t; m.classList.toggle('bad',!!bad); } }
+document.addEventListener('change',e=>{ if(e.target.id==='cat-category'){ const c=e.target.value; $('cat-unit').textContent=catUnit(c); $('cat-sp-wrap').hidden=c!=='ev'; $('cat-motor-wrap').hidden=c!=='appliance'; $('cat-value').placeholder=c==='cooking'?'e.g. 12.1':'e.g. 4500'; } });
+document.addEventListener('input',e=>{ if(e.target.id==='cat-q'){ catQuery=e.target.value; renderCatList(); } });
+document.addEventListener('click',async e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  if(b.dataset.view==='catalog'){ catReturn=null; setView('catalog'); return; }
+  if(b.id==='catLock'){ lsSet(PASS_KEY,null); renderCatalog(true); return; }
+  if(b.id==='catCancel'){ const back=catReturn&&!(catEdit&&catEdit.id); catEdit=null; if(back){ const r=catReturn; catReturn=null; setView('calc'); const n=$(r.key+'-'+r.i+'-name'); n&&n.scrollIntoView({block:'center'}); } else renderCatalog(); return; }
+  if(b.dataset.catedit){ const x=CAT.items.find(it=>String(it.id)===b.dataset.catedit); if(x){ catEdit={...x}; catReturn=null; renderCatalog(); $('catForm').scrollIntoView({behavior:'smooth',block:'start'}); } return; }
+  if(b.dataset.catrm){ const id=b.dataset.catrm;
+    if(catArmed!==id){ catArmed=id; renderCatList(); setTimeout(()=>{ if(catArmed===id){ catArmed=null; if(view==='catalog') renderCatList(); } },3000); return; }
+    catArmed=null; const pass=lsGet(PASS_KEY);
+    if(!pass){ renderCatList(); catMsg('Enter the team passcode in the form above and add or save once to unlock editing, then remove the item.',true); $('catForm').scrollIntoView({behavior:'smooth'}); return; }
+    if(String(id).startsWith('b')){ catMsg('Reconnect to remove items.',true); return; }
+    try{ await rpc('loadcalc_catalog_remove',{p_passcode:pass,p_id:id}); await loadCatalog(); catMsg('Item removed.'); }
+    catch(err){ if(/passcode/i.test(err.message)) lsSet(PASS_KEY,null); renderCatalog(true); catMsg(err.message,true); }
+    return; }
+  if(b.id==='catSave'){
+    const category=$('cat-category').value, name=$('cat-name').value.trim(), value=numOrBlank($('cat-value').value), sp=category==='ev'?numOrBlank($('cat-setpoint').value):'';
+    if(!name){ catMsg('Enter an item name.',true); $('cat-name').focus(); return; }
+    if(value===''||value<=0){ catMsg('Enter the nameplate rating as a number in '+catUnit(category)+'.',true); $('cat-value').focus(); return; }
+    if(category==='cooking'&&value>100){ catMsg('Cooking ratings are in kW. '+value+' kW looks like watts; enter '+(value/1000)+' for '+value+' W.',true); $('cat-value').focus(); return; }
+    const pass=lsGet(PASS_KEY)||($('cat-pass')&&$('cat-pass').value.trim());
+    if(!pass){ catMsg('Enter the team passcode.',true); $('cat-pass')&&$('cat-pass').focus(); return; }
+    const item={id:catEdit&&catEdit.id&&!String(catEdit.id).startsWith('b')?catEdit.id:'',category,name,value,motor:category==='appliance'&&$('cat-motor').checked,setpoint:sp===''?'':sp,notes:$('cat-notes').value,source:$('cat-source').value};
+    b.disabled=true; catMsg('Saving…');
+    try{
+      const saved=await rpc('loadcalc_catalog_save',{p_passcode:pass,p_item:item});
+      lsSet(PASS_KEY,pass); catEdit=null; const r=catReturn; catReturn=null; await loadCatalog(false);
+      if(r&&saved){ setView('calc'); applyItem(r.key,r.i,saved); const n=$(r.key+'-'+r.i+'-name'); n&&n.scrollIntoView({block:'center'}); $('status').textContent='Added "'+saved.name+'" to the catalogue and filled it in.'; }
+      else { renderCatalog(); catMsg(item.id?'Changes saved.':'Added "'+name+'" to the catalogue.'); }
+    }catch(err){ b.disabled=false; if(/passcode/i.test(err.message)){ lsSet(PASS_KEY,null); renderCatalog(true); } catMsg(err.message,true); }
+    return; }
+});
+loadCatalog();
+
 renderAll();
 try{ if('scrollRestoration' in history) history.scrollRestoration='manual'; if(location.hash) history.replaceState(null,'',location.pathname+location.search); }catch(e){}
 window.scrollTo(0,0); window.addEventListener('pageshow',()=>window.scrollTo(0,0));
